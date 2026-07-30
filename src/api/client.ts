@@ -1,0 +1,96 @@
+// mobile-app/src/api/client.ts
+// Unified Axios API Gateway for All 4 ASB Domains
+
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+import { API_ENDPOINTS } from './config';
+
+const TOKEN_KEY = 'asb_access_token';
+
+export async function getStoredToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to read token from SecureStore:', error);
+    return null;
+  }
+}
+
+export async function saveStoredToken(token: string): Promise<void> {
+  try {
+    if (token) {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    }
+  } catch (error) {
+    console.error('Failed to save token to SecureStore:', error);
+  }
+}
+
+export async function removeStoredToken(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to remove token:', error);
+  }
+}
+
+// DOB Date Format Helper: Ensures DOB is passed as DD/MM/YYYY for Python Backends
+export function formatDobForApi(dob?: string): string {
+  if (!dob) return '29/10/2001';
+  let clean = dob.replace(/-/g, '/').trim();
+  const parts = clean.split('/');
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return clean;
+}
+
+// Helper to normalize image URLs from MERN API (e.g. /uploads/products/xxx.webp)
+export function getImageUrl(path?: string): string {
+  if (!path) return 'https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=400';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_ENDPOINTS.CRYSTAL_BASE}${cleanPath}`;
+}
+
+// 1. Crystal / MERN Master Auth Client
+export const crystalApi = axios.create({
+  baseURL: API_ENDPOINTS.CRYSTAL_BASE,
+  timeout: 30000,
+});
+
+// 2. Main Reports & AI FastAPI Client
+export const reportApi = axios.create({
+  baseURL: API_ENDPOINTS.REPORT_BASE,
+  timeout: 180000, // 3 min for AI & PDF generation
+});
+
+// 3. Name Numerology Flask Client
+export const nameApi = axios.create({
+  baseURL: API_ENDPOINTS.NAME_BASE,
+  timeout: 30000,
+});
+
+// 4. Mobile Numerology Flask Client
+export const mobileApi = axios.create({
+  baseURL: API_ENDPOINTS.MOBILE_BASE,
+  timeout: 30000,
+});
+
+// Attach Authorization & X-Auth-Token headers to all outgoing requests
+const clients = [crystalApi, reportApi, nameApi, mobileApi];
+
+clients.forEach((client) => {
+  client.interceptors.request.use(async (config) => {
+    const token = await getStoredToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      config.headers['X-Auth-Token'] = token;
+    }
+    return config;
+  }, (error) => {
+    return Promise.reject(error);
+  });
+});

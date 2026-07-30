@@ -1,0 +1,257 @@
+// mobile-app/src/app/reports/relationship.tsx
+// Relationship & Marriage Compatibility Report Screen with Social Share Cards
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Heart, Star, Sparkles } from 'lucide-react-native';
+import { ASBColors, ASBFonts } from '../../theme/tokens';
+import { GlassCard } from '../../components/common/GlassCard';
+import { GradientButton } from '../../components/common/GradientButton';
+import { reportApi, formatDobForApi } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { SocialShareCard } from '../../components/common/SocialShareCard';
+import { calculateRelationshipCompatibility } from '../../utils/numerologyMath';
+
+export default function RelationshipReportScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [partner1Name, setPartner1Name] = useState(user?.name || 'Partner 1');
+  const [partner1Dob, setPartner1Dob] = useState(user?.dob || '29/10/2001');
+  const [partner2Name, setPartner2Name] = useState('Partner 2');
+  const [partner2Dob, setPartner2Dob] = useState('15/05/1998');
+  const [loading, setLoading] = useState(false);
+
+  const initialCalc = calculateRelationshipCompatibility(partner1Name, partner1Dob, partner2Name, partner2Dob);
+  const [report, setReport] = useState<any>(initialCalc);
+
+  const handleAnalyze = async () => {
+    setLoading(true);
+
+    const dob1Formatted = formatDobForApi(partner1Dob);
+    const dob2Formatted = formatDobForApi(partner2Dob);
+
+    try {
+      const res = await reportApi.get('/api/numerology/relationship-triangle.report.json', {
+        params: { left: dob1Formatted, right: dob2Formatted },
+      });
+      if (res.data) {
+        const bond = res.data.bond_assessment || {};
+        const rawScore = typeof bond.score === 'number' ? bond.score : 3;
+        const calcPercent = Math.min(98, Math.max(65, 70 + rawScore * 7));
+        const ratingLabel = (bond.bucket || res.data.rating || 'HIGH SOUL MATCH').toUpperCase();
+
+        const notesList = (bond.notes || []).filter(Boolean).join(' • ');
+        const emotionalText = notesList
+          ? `Bond Status: ${bond.bucket || 'Strong'}. ${notesList}. Numerical synergy number #${res.data.combined_number || 9}.`
+          : `High emotional empathy and mutual understanding detected between ${partner1Name} (${partner1Dob}) and ${partner2Name} (${partner2Dob}). Your numerical profiles share complementary planetary frequencies.`;
+
+        const outlookText = res.data.core_notes?.priority
+          ? `${res.data.core_notes.priority} ${res.data.core_notes.F_trait ? 'Vibration: ' + res.data.core_notes.F_trait : ''}`
+          : `Long-term marriage stability is exceptionally favorable. Cosmic alignment indicates an ideal window for commitment and family expansion during Personal Years 2026–2027.`;
+
+        setReport({
+          score: calcPercent,
+          rating: ratingLabel,
+          emotional_harmony: emotionalText,
+          marriage_outlook: outlookText,
+        });
+      }
+    } catch (e) {
+      console.warn('Relationship API fallback, calculating local Chaldean math:', e);
+      const computed = calculateRelationshipCompatibility(partner1Name, partner1Dob, partner2Name, partner2Dob);
+      setReport(computed);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const emotionalHarmonyText = report?.emotional_harmony || initialCalc.emotional_harmony;
+  const marriageOutlookText = report?.marriage_outlook || initialCalc.marriage_outlook;
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.navRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <ArrowLeft size={20} color={ASBColors.darkNavy} />
+        </TouchableOpacity>
+        <Text style={styles.navTitle}>Relationship Compatibility</Text>
+      </View>
+
+      {/* Input Form Card */}
+      <GlassCard style={styles.card}>
+        <Text style={styles.sectionTitle}>ENTER PARTNER DETAILS</Text>
+
+        <View style={styles.partnerBox}>
+          <Text style={styles.pLabel}>PARTNER 1 (YOU)</Text>
+          <TextInput
+            style={styles.input}
+            value={partner1Name}
+            onChangeText={setPartner1Name}
+            placeholder="Full Name"
+          />
+          <TextInput
+            style={styles.input}
+            value={partner1Dob}
+            onChangeText={setPartner1Dob}
+            placeholder="DOB (DD/MM/YYYY)"
+          />
+        </View>
+
+        <View style={styles.partnerBox}>
+          <Text style={[styles.pLabel, { color: ASBColors.crimsonMagenta }]}>PARTNER 2</Text>
+          <TextInput
+            style={styles.input}
+            value={partner2Name}
+            onChangeText={setPartner2Name}
+            placeholder="Full Name"
+          />
+          <TextInput
+            style={styles.input}
+            value={partner2Dob}
+            onChangeText={setPartner2Dob}
+            placeholder="DOB (DD/MM/YYYY)"
+          />
+        </View>
+
+        <GradientButton
+          title="Analyze Relationship Harmony"
+          variant="primary"
+          loading={loading}
+          icon={<Heart size={18} color="#FFF" />}
+          onPress={handleAnalyze}
+          style={{ marginTop: 12 }}
+        />
+      </GlassCard>
+
+      {/* Results */}
+      {report && (
+        <View style={{ gap: 12 }}>
+          <GlassCard variant="purple" style={styles.scoreCard}>
+            <View style={styles.scoreRow}>
+              <Star size={32} color={ASBColors.primaryPurple} fill={ASBColors.primaryPurple} />
+              <View>
+                <Text style={styles.scoreText}>{report.score || 88}% SYNERGY</Text>
+                <Text style={styles.ratingText}>{report.rating || 'EXCELLENT SOUL MATCH'}</Text>
+              </View>
+            </View>
+          </GlassCard>
+
+          <GlassCard style={styles.card}>
+            <Text style={styles.boxTitle}>Emotional & Soul Connection</Text>
+            <Text style={styles.boxText}>{emotionalHarmonyText}</Text>
+          </GlassCard>
+
+          <GlassCard style={styles.card}>
+            <Text style={styles.boxTitle}>Long-Term Marriage Outlook</Text>
+            <Text style={styles.boxText}>{marriageOutlookText}</Text>
+          </GlassCard>
+
+          {/* Social Story Share Badge */}
+          <SocialShareCard
+            name1={partner1Name}
+            name2={partner2Name}
+            matchScore={report.score || 88}
+            verdict={report.rating || 'EXCELLENT SOUL MATCH'}
+          />
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: ASBColors.bgWarmIvory,
+  },
+  content: {
+    padding: 16,
+    paddingTop: 54,
+    paddingBottom: 40,
+    gap: 14,
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: ASBColors.borderIvory,
+  },
+  navTitle: {
+    fontSize: 18,
+    fontFamily: ASBFonts.heading,
+    color: ASBColors.darkNavy,
+  },
+  card: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontFamily: ASBFonts.bodyBold,
+    color: ASBColors.darkNavy,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  partnerBox: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: ASBColors.borderIvory,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    gap: 8,
+  },
+  pLabel: {
+    fontSize: 10,
+    fontFamily: ASBFonts.bodyBold,
+    color: ASBColors.primaryPurple,
+    letterSpacing: 1,
+  },
+  input: {
+    backgroundColor: ASBColors.bgWarmIvory,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: ASBColors.darkNavy,
+  },
+  scoreCard: {
+    padding: 16,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  scoreText: {
+    fontSize: 22,
+    fontFamily: ASBFonts.heading,
+    color: ASBColors.darkNavy,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontFamily: ASBFonts.bodyBold,
+    color: ASBColors.primaryPurple,
+  },
+  boxTitle: {
+    fontSize: 14,
+    fontFamily: ASBFonts.bodyBold,
+    color: ASBColors.darkNavy,
+    marginBottom: 6,
+  },
+  boxText: {
+    fontSize: 13,
+    color: ASBColors.darkNavy,
+    lineHeight: 18,
+  },
+});
