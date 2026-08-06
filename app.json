@@ -12,6 +12,7 @@
       "icon": "./assets/images/asb_logo.jpg"
     },
     "android": {
+      "package": "com.astroschoolbaba.mobileapp",
       "adaptiveIcon": {
         "backgroundColor": "#1A0B2E",
         "foregroundImage": "./assets/images/asb_logo.jpg",
