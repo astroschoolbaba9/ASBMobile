@@ -2,6 +2,7 @@
   "expo": {
     "name": "mobile-app",
     "slug": "mobile-app",
+    "owner": "astroschoolbaba9",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/asb_logo.jpg",
@@ -37,6 +38,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c36eca41-6b5d-431d-8339-f174e4e0c6d7"
+      }
     }
   }
 }
