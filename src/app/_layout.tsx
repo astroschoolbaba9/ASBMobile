@@ -9,6 +9,7 @@ import { useFonts, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { AuthProvider } from '../context/AuthContext';
+import { CartProvider } from '../context/CartContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { ASBColors } from '../theme/tokens';
 
@@ -47,8 +48,9 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
+        <CartProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
           <Stack.Screen name="(auth)/register" options={{ presentation: 'modal' }} />
@@ -83,6 +85,7 @@ export default function RootLayout() {
           <Stack.Screen name="info/contact" options={{ headerShown: false }} />
           <Stack.Screen name="info/services" options={{ headerShown: false }} />
         </Stack>
+        </CartProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

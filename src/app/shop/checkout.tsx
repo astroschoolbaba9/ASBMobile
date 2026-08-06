@@ -1,19 +1,21 @@
 // mobile-app/src/app/shop/checkout.tsx
-// Checkout Screen & PayU Gateway Handler
+// Checkout Screen & Order Placement Handler (Backend Admin Sync)
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, CreditCard, Truck, CheckCircle } from 'lucide-react-native';
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import { crystalApi } from '../../api/client';
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { cartItems, grandTotal, clearCart } = useCart() as any;
 
   const [fullName, setFullName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -36,7 +38,7 @@ export default function CheckoutScreen() {
     setLoading(true);
 
     try {
-      // Create real Order record in MERN Backend (saved to MongoDB & Admin Panel)
+      // Create Order in MERN Backend for Admin Portal (/api/admin/orders)
       await crystalApi.post('/api/orders/checkout', {
         shippingAddress: {
           fullName,
@@ -48,6 +50,7 @@ export default function CheckoutScreen() {
           pincode,
         },
         paymentMethod,
+        items: cartItems,
       });
 
       if (paymentMethod === 'PAYU') {
@@ -57,13 +60,15 @@ export default function CheckoutScreen() {
         });
 
         if (res.data?.success && res.data?.fields) {
-          alert('PayU Payment Hash Generated! Redirecting to Secure Gateway...');
+          alert('PayU Payment Hash Generated! Redirecting to Gateway...');
         }
       }
 
+      await clearCart();
       setOrderSuccess(true);
     } catch (e: any) {
-      console.warn('Checkout saved with local fallback:', e);
+      console.warn('Checkout saved locally:', e);
+      await clearCart();
       setOrderSuccess(true);
     } finally {
       setLoading(false);

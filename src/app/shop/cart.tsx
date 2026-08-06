@@ -1,51 +1,22 @@
 // mobile-app/src/app/shop/cart.tsx
-// Cart Drawer & Cost Summary Screen
+// Cart Screen & Cost Breakdown connected to global CartContext
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Trash2, ShoppingCart, Tag, ShieldCheck } from 'lucide-react-native';
+import { ArrowLeft, Trash2, ShoppingCart, Tag } from 'lucide-react-native';
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
-
-import { useQuery } from '@tanstack/react-query';
-import { crystalApi, getImageUrl } from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 export default function CartScreen() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
-
-  const { data: cartData, refetch } = useQuery({
-    queryKey: ['cart-page', isAuthenticated],
-    queryFn: async () => {
-      if (!isAuthenticated) return null;
-      try {
-        const res = await crystalApi.get('/api/cart');
-        return res.data;
-      } catch (e) {
-        console.warn('Cart API fetch error:', e);
-        return null;
-      }
-    },
-    enabled: isAuthenticated,
-  });
-
-  const cartItems = (cartData?.items || []).map((item: any) => ({
-    id: item._id || item.productId?._id || item.productId,
-    productId: item.productId?._id || item.productId || item.id,
-    title: item.title || item.productId?.title || item.productId?.name || 'Spiritual Item',
-    price: item.price || item.productId?.price || 999,
-    mrp: item.mrp || item.productId?.mrp || 1499,
-    qty: item.quantity || item.qty || 1,
-    image: getImageUrl(item.image || item.productId?.images?.[0] || item.productId?.image),
-  }));
+  const { cartItems, updateQty, removeFromCart, subtotal } = useCart();
 
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
 
-  const subtotal = cartItems.reduce((sum: number, item: any) => sum + item.price * item.qty, 0);
   const shipping = subtotal > 999 || subtotal === 0 ? 0 : 99;
   const grandTotal = Math.max(0, subtotal - discount + shipping);
 
@@ -55,29 +26,6 @@ export default function CartScreen() {
       alert('Coupon ASB10 applied! 10% Discount saved.');
     } else {
       alert('Invalid coupon code. Try ASB10.');
-    }
-  };
-
-  const updateQty = async (productId: string, delta: number) => {
-    const item = cartItems.find((i: any) => i.id === productId || i.productId === productId);
-    if (!item) return;
-    const newQty = Math.max(1, item.qty + delta);
-    try {
-      await crystalApi.post('/api/cart/items', { productId: item.productId, quantity: delta });
-      await refetch();
-    } catch (e) {
-      console.warn('Update cart qty error:', e);
-    }
-  };
-
-  const removeItem = async (productId: string) => {
-    const item = cartItems.find((i: any) => i.id === productId || i.productId === productId);
-    if (!item) return;
-    try {
-      await crystalApi.delete(`/api/cart/items/${item.productId}`);
-      await refetch();
-    } catch (e) {
-      console.warn('Remove cart item error:', e);
     }
   };
 
@@ -106,7 +54,7 @@ export default function CartScreen() {
       ) : (
         <View style={{ gap: 14 }}>
           {/* Cart Item List */}
-          {cartItems.map((item: any) => (
+          {cartItems.map((item) => (
             <GlassCard key={item.id} style={styles.itemCard}>
               <Image source={{ uri: item.image }} style={styles.itemImg} />
               <View style={styles.itemCol}>
@@ -114,15 +62,15 @@ export default function CartScreen() {
                 <Text style={styles.itemPrice}>₹{item.price}</Text>
 
                 <View style={styles.qtyRow}>
-                  <TouchableOpacity onPress={() => updateQty(item.id, -1)} style={styles.qtyBtn}>
+                  <TouchableOpacity onPress={() => updateQty(item.productId, -1)} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>-</Text>
                   </TouchableOpacity>
                   <Text style={styles.qtyVal}>{item.qty}</Text>
-                  <TouchableOpacity onPress={() => updateQty(item.id, 1)} style={styles.qtyBtn}>
+                  <TouchableOpacity onPress={() => updateQty(item.productId, 1)} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>+</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity onPress={() => removeItem(item.id)} style={styles.deleteBtn}>
+                  <TouchableOpacity onPress={() => removeFromCart(item.productId)} style={styles.deleteBtn}>
                     <Trash2 size={16} color={ASBColors.errorRed} />
                   </TouchableOpacity>
                 </View>

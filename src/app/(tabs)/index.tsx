@@ -242,109 +242,8 @@ export default function DashboardScreen() {
                 </View>
               </GlassCard>
             </Animated.View>
-
-            {/* Daily Cosmic Energy Pulse Meter */}
-            <Animated.View entering={Platform.OS !== 'web' ? FadeInDown.delay(200).duration(600) : undefined}>
-              <GlassCard style={styles.energyMeterCard}>
-                <View style={styles.meterHeader}>
-                  <View style={styles.meterTitleRow}>
-                    <Zap size={18} color={ASBColors.crimsonMagenta} />
-                    <Text style={styles.meterTitle}>Daily Vibrational Energy</Text>
-                  </View>
-                  <Text style={styles.meterScore}>{profile.scores.alignmentPercentage}% High Alignment</Text>
-                </View>
-
-                {/* Animated Bar */}
-                <View style={styles.trackBackground}>
-                  <Animated.View style={[styles.trackFill, progressAnimatedStyle]} />
-                </View>
-
-                <View style={styles.energyGrid}>
-                  <View style={styles.energyItem}>
-                    <Text style={styles.energyLabel}>Lucky Numbers</Text>
-                    <Text style={styles.energyVal}>{profile.moolank} & {profile.bhagyank}</Text>
-                  </View>
-                  <View style={styles.energyItem}>
-                    <Text style={styles.energyLabel}>Lucky Color</Text>
-                    <Text style={styles.energyVal}>Royal Purple</Text>
-                  </View>
-                  <View style={styles.energyItem}>
-                    <Text style={styles.energyLabel}>Personal Year</Text>
-                    <Text style={styles.energyVal}>Year #{profile.personalYear}</Text>
-                  </View>
-                </View>
-              </GlassCard>
-            </Animated.View>
-
-            {/* Clean 3 Visual Attribute Score Pills (NO TEXT WALLS!) */}
-            <Animated.View entering={Platform.OS !== 'web' ? FadeInDown.delay(300).duration(600) : undefined}>
-              <GlassCard style={styles.scoresCard}>
-                <Text style={styles.scoresTitle}>VIBRATIONAL ATTRIBUTE BREAKDOWN</Text>
-                <View style={styles.scoreRow}>
-                  <View style={styles.scorePill}>
-                    <Text style={styles.pillLabel}>Spiritual Depth</Text>
-                    <Text style={styles.pillVal}>{profile.scores.spiritualDepth}/10</Text>
-                  </View>
-
-                  <View style={styles.scorePill}>
-                    <Text style={styles.pillLabel}>Financial Luck</Text>
-                    <Text style={[styles.pillVal, { color: ASBColors.goodGreen }]}>
-                      {profile.scores.financialLuck}/10
-                    </Text>
-                  </View>
-
-                  <View style={styles.scorePill}>
-                    <Text style={styles.pillLabel}>Leadership</Text>
-                    <Text style={[styles.pillVal, { color: ASBColors.primaryPurple }]}>
-                      {profile.scores.leadership}/10
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.microInsightBox}>
-                  <Sparkles size={14} color={ASBColors.primaryPurple} />
-                  <Text style={styles.microInsightText}>
-                    {aiData?.interpretation?.slice(0, 140) ||
-                      `Soul #${profile.moolank} & Life Path #${profile.bhagyank} grant high alignment for career growth and inner wisdom today.`}
-                  </Text>
-                </View>
-              </GlassCard>
-            </Animated.View>
-
-            {/* 3D Reanimated Core Numbers Section */}
-            <Text style={styles.sectionHeading}>CORE NUMEROLOGY TRIANGLE</Text>
-
-            <FlipNumerologyCard
-              code="G"
-              title="SOUL PURPOSE NUMBER"
-              subTitle="Your core spiritual frequency"
-              numberValue={profile.moolank}
-              traitText={`Number ${profile.moolank}: Spiritual Leader`}
-              description={`Soul Number ${profile.moolank} dictates your inner drive, subconscious desires, and baseline vibration.`}
-            />
-
-            <FlipNumerologyCard
-              code="E"
-              title="LIFE PATH NUMBER"
-              subTitle="Your daily energy vibration"
-              numberValue={profile.bhagyank}
-              traitText={`Number ${profile.bhagyank}: Life Blueprint`}
-              description={`Life Path ${profile.bhagyank} governs your natural talents, career success, and primary life lessons.`}
-            />
-
-            <FlipNumerologyCard
-              code="F"
-              title="EXPRESSION NUMBER"
-              subTitle="Your outer manifestation"
-              numberValue={profile.expression}
-              traitText={`Number ${profile.expression}: Outer Manifestor`}
-              description={`Expression Number ${profile.expression} reflects how others perceive your talent and goals.`}
-            />
           </>
         )}
-
-        {/* Real-Time Decision Clock */}
-        <VibrationalClock />
 
         {/* 6 Quick Action Module Grid */}
         <Text style={styles.sectionHeading}>NUMEROLOGY SUITE & TOOLS</Text>
@@ -398,6 +297,39 @@ export default function DashboardScreen() {
             <Text style={styles.moduleDesc}>100-Page Report</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 3D Reanimated Core Numbers Section */}
+        <Text style={styles.sectionHeading}>CORE NUMEROLOGY TRIANGLE</Text>
+
+        <FlipNumerologyCard
+          code="G"
+          title="SOUL PURPOSE NUMBER"
+          subTitle="Your core spiritual frequency"
+          numberValue={profile.moolank}
+          traitText={`Number ${profile.moolank}: Spiritual Leader`}
+          description={`Soul Number ${profile.moolank} dictates your inner drive, subconscious desires, and baseline vibration.`}
+        />
+
+        <FlipNumerologyCard
+          code="E"
+          title="LIFE PATH NUMBER"
+          subTitle="Your daily energy vibration"
+          numberValue={profile.bhagyank}
+          traitText={`Number ${profile.bhagyank}: Life Blueprint`}
+          description={`Life Path ${profile.bhagyank} governs your natural talents, career success, and primary life lessons.`}
+        />
+
+        <FlipNumerologyCard
+          code="F"
+          title="EXPRESSION NUMBER"
+          subTitle="Your outer manifestation"
+          numberValue={profile.expression}
+          traitText={`Number ${profile.expression}: Outer Manifestor`}
+          description={`Expression Number ${profile.expression} reflects how others perceive your talent and goals.`}
+        />
+
+        {/* Real-Time Decision Clock */}
+        <VibrationalClock />
 
         {/* Crystal Store CTA */}
         <GlassCard variant="dark" style={styles.ctaCard}>
@@ -476,9 +408,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerLogoImg: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     resizeMode: 'cover',
   },
   brandTitle: {

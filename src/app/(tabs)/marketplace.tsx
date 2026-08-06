@@ -1,22 +1,28 @@
 // mobile-app/src/app/(tabs)/marketplace.tsx
-// ASB Crystal & Spiritual Storefront Screen (Real MERN Integration & Auth Gated Cart)
+// ASB Crystal & Spiritual Storefront Screen (Amazon/Flipkart Enterprise UI + Cart Engine)
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Search, ShoppingCart, Star, ShieldCheck, Sparkles, LogIn } from 'lucide-react-native';
+import { Search, ShoppingCart, Star, ShieldCheck, Sparkles, ShoppingBag, CheckCircle, UserCheck } from 'lucide-react-native';
 import { ASBColors, ASBShadows, ASBRadius, ASBFonts } from '../../theme/tokens';
 import { GradientButton } from '../../components/common/GradientButton';
+import { GlassCard } from '../../components/common/GlassCard';
 import { useQuery } from '@tanstack/react-query';
 import { crystalApi, getImageUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 export default function MarketplaceScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const { cartCount, addToCart } = useCart();
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [addedItemName, setAddedItemName] = useState<string | null>(null);
+  const [authPromptVisible, setAuthPromptVisible] = useState(false);
 
   const categories = [
     { id: 'ALL', label: 'All Products' },
@@ -28,7 +34,7 @@ export default function MarketplaceScreen() {
   ];
 
   // Fetch Products Catalog from Real MERN API (All 127 Products via max valid limit=100 pagination)
-  const { data: rawProductsData } = useQuery({
+  const { data: rawProductsData, isLoading } = useQuery({
     queryKey: ['products-catalog'],
     queryFn: async () => {
       try {
@@ -46,23 +52,6 @@ export default function MarketplaceScreen() {
     },
   });
 
-  // Fetch Live User Cart
-  const { data: cartData, refetch: refetchCart } = useQuery({
-    queryKey: ['user-cart', isAuthenticated],
-    queryFn: async () => {
-      if (!isAuthenticated) return null;
-      try {
-        const res = await crystalApi.get('/api/cart');
-        return res.data;
-      } catch (e) {
-        return null;
-      }
-    },
-    enabled: isAuthenticated,
-  });
-
-  const cartCount = cartData?.items?.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0) || 0;
-
   const allProducts = rawProductsData && Array.isArray(rawProductsData) ? rawProductsData : [];
 
   const productsList = allProducts.filter((item: any) => {
@@ -73,16 +62,17 @@ export default function MarketplaceScreen() {
   });
 
   const handleAddToCart = async (item: any) => {
-    if (!isAuthenticated) {
-      router.push('/(auth)/login');
-      return;
-    }
     setAddingId(item._id);
     try {
-      await crystalApi.post('/api/cart/items', { productId: item._id, quantity: 1 });
-      await refetchCart();
+      await addToCart(item, 1);
+      setAddedItemName(item.title || item.name);
+      setTimeout(() => setAddedItemName(null), 2500);
+
+      if (!isAuthenticated) {
+        setAuthPromptVisible(true);
+      }
     } catch (e) {
-      console.warn('Cart API error, updated locally:', e);
+      console.warn('Cart addition error:', e);
     } finally {
       setAddingId(null);
     }
@@ -100,13 +90,7 @@ export default function MarketplaceScreen() {
 
           <TouchableOpacity
             style={styles.cartIconBtn}
-            onPress={() => {
-              if (!isAuthenticated) {
-                router.push('/(auth)/login');
-              } else {
-                router.push('/shop/cart' as any);
-              }
-            }}
+            onPress={() => router.push('/shop/cart' as any)}
           >
             <ShoppingCart size={22} color={ASBColors.primaryPurple} />
             {cartCount > 0 && (
@@ -143,67 +127,110 @@ export default function MarketplaceScreen() {
         </ScrollView>
       </View>
 
-      {/* Product Grid */}
+      {/* Added Toast Alert */}
+      {addedItemName && (
+        <View style={styles.toast}>
+          <CheckCircle size={16} color="#FFFFFF" />
+          <Text style={styles.toastText}>Added "{addedItemName.slice(0, 24)}..." to Cart</Text>
+        </View>
+      )}
+
+      {/* Product Grid - Enterprise Flipkart/Amazon Style */}
       <ScrollView contentContainerStyle={styles.gridContent} showsVerticalScrollIndicator={false}>
         <View style={styles.promoBanner}>
           <Sparkles size={16} color={ASBColors.primaryPurple} />
           <Text style={styles.promoText}>Free Express Shipping on orders above ₹999!</Text>
         </View>
 
-        <View style={styles.productGrid}>
-          {productsList.map((item: any) => {
-            const savings = item.mrp ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0;
-            return (
-              <TouchableOpacity
-                key={item._id}
-                style={[styles.productCard, ASBShadows.cardRest]}
-                activeOpacity={0.85}
-                onPress={() => {
-                  if (!isAuthenticated) {
-                    router.push('/(auth)/login');
-                  } else {
-                    router.push(`/shop/product/${item._id}` as any);
-                  }
-                }}
-              >
-                <View style={styles.imgContainer}>
-                  <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.productImg} />
-                  {savings > 0 && (
-                    <View style={styles.savingsBadge}>
-                      <Text style={styles.savingsText}>{savings}% OFF</Text>
+        {isLoading ? (
+          <View style={styles.loadingBox}>
+            <Text style={styles.loadingText}>Loading Energised Products Catalog...</Text>
+          </View>
+        ) : (
+          <View style={styles.productGrid}>
+            {productsList.map((item: any) => {
+              const savings = item.mrp ? Math.round(((item.mrp - item.price) / item.mrp) * 100) : 0;
+              return (
+                <View key={item._id} style={styles.productCard}>
+                  <TouchableOpacity
+                    activeOpacity={0.88}
+                    onPress={() => router.push(`/shop/product/${item._id}` as any)}
+                  >
+                    <View style={styles.imgContainer}>
+                      <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.productImg} />
+                      {savings > 0 && (
+                        <View style={styles.savingsBadge}>
+                          <Text style={styles.savingsText}>{savings}% OFF</Text>
+                        </View>
+                      )}
                     </View>
-                  )}
-                </View>
+                  </TouchableOpacity>
 
-                <View style={styles.productInfo}>
-                  <Text style={styles.productTitle} numberOfLines={2}>
-                    {item.title || item.name}
-                  </Text>
+                  <View style={styles.productInfo}>
+                    <TouchableOpacity onPress={() => router.push(`/shop/product/${item._id}` as any)}>
+                      <Text style={styles.productTitle} numberOfLines={2}>
+                        {item.title || item.name}
+                      </Text>
+                    </TouchableOpacity>
 
-                  <View style={styles.ratingRow}>
-                    <Star size={14} color="#F59E0B" fill="#F59E0B" />
-                    <Text style={styles.ratingText}>{item.ratingAvg || 4.8}</Text>
+                    <View style={styles.ratingRow}>
+                      <Star size={13} color="#F59E0B" fill="#F59E0B" />
+                      <Text style={styles.ratingText}>{item.ratingAvg || 4.8}</Text>
+                      <Text style={styles.ratingCount}>({item.ratingCount || 86})</Text>
+                    </View>
+
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceText}>₹{item.price}</Text>
+                      {item.mrp > item.price && <Text style={styles.mrpText}>₹{item.mrp}</Text>}
+                    </View>
+
+                    {/* Always display Add to Cart button */}
+                    <GradientButton
+                      title="Add to Cart"
+                      variant="crystal"
+                      loading={addingId === item._id}
+                      icon={<ShoppingBag size={14} color="#FFF" />}
+                      onPress={() => handleAddToCart(item)}
+                      style={{ marginTop: 8 }}
+                    />
                   </View>
-
-                  <View style={styles.priceRow}>
-                    <Text style={styles.priceText}>₹{item.price}</Text>
-                    {item.mrp > item.price && <Text style={styles.mrpText}>₹{item.mrp}</Text>}
-                  </View>
-
-                  <GradientButton
-                    title={isAuthenticated ? 'Add to Cart' : 'Sign In to Buy'}
-                    variant="crystal"
-                    loading={addingId === item._id}
-                    icon={!isAuthenticated ? <LogIn size={14} color="#FFF" /> : undefined}
-                    onPress={() => handleAddToCart(item)}
-                    style={{ marginTop: 8 }}
-                  />
                 </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Guest Login Prompt Modal */}
+      <Modal visible={authPromptVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <GlassCard style={styles.modalContent}>
+            <UserCheck size={36} color={ASBColors.primaryPurple} />
+            <Text style={styles.modalTitle}>Item Saved to Cart!</Text>
+            <Text style={styles.modalSub}>
+              Sign in to sync your cart across devices, apply discount coupons, and track express orders.
+            </Text>
+
+            <View style={styles.modalBtnCol}>
+              <GradientButton
+                title="Sign In / Register"
+                variant="crystal"
+                onPress={() => {
+                  setAuthPromptVisible(false);
+                  router.push('/(auth)/login');
+                }}
+              />
+
+              <TouchableOpacity
+                style={styles.continueGuestBtn}
+                onPress={() => setAuthPromptVisible(false)}
+              >
+                <Text style={styles.continueGuestText}>Continue Shopping as Guest</Text>
+              </TouchableOpacity>
+            </View>
+          </GlassCard>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -211,14 +238,14 @@ export default function MarketplaceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ASBColors.bgCream,
+    backgroundColor: '#F8FAF9',
   },
   header: {
     paddingTop: 50,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: ASBColors.borderIvory,
+    borderBottomColor: '#E5E7EB',
   },
   topRow: {
     flexDirection: 'row',
@@ -250,94 +277,105 @@ const styles = StyleSheet.create({
     right: -2,
     backgroundColor: ASBColors.crimsonMagenta,
     borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   cartBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
     color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ASBColors.bgCream,
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 12,
-    gap: 8,
   },
   searchInput: {
     flex: 1,
+    marginLeft: 8,
     fontSize: 13,
     color: ASBColors.darkNavy,
   },
   catScroll: {
+    flexDirection: 'row',
     marginBottom: 12,
   },
   catChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: ASBColors.borderIvory,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
     marginRight: 8,
   },
   catChipActive: {
     backgroundColor: ASBColors.primaryPurple,
-    borderColor: ASBColors.primaryPurple,
   },
   catText: {
-    fontSize: 11,
-    fontFamily: ASBFonts.bodyBold,
-    color: ASBColors.darkNavy,
+    fontSize: 12,
+    fontWeight: '600',
+    color: ASBColors.textMuted,
   },
   catTextActive: {
     color: '#FFFFFF',
   },
   gridContent: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: 14,
+    paddingBottom: 90,
   },
   promoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#F5F1FF',
-    borderWidth: 1,
-    borderColor: ASBColors.borderPurple,
+    backgroundColor: '#F3E8FF',
+    padding: 10,
     borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   promoText: {
     fontSize: 12,
-    fontFamily: ASBFonts.bodyBold,
-    color: ASBColors.darkNavy,
+    fontWeight: '700',
+    color: ASBColors.primaryPurple,
+  },
+  loadingBox: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 13,
+    color: ASBColors.textMuted,
   },
   productGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
     gap: 12,
+    justifyContent: 'space-between',
   },
   productCard: {
     width: '48%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: ASBColors.borderIvory,
-    marginBottom: 8,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 4,
   },
   imgContainer: {
     width: '100%',
     height: 140,
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#F9FAFB',
   },
   productImg: {
     width: '100%',
@@ -354,18 +392,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   savingsText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
     color: ASBColors.goodGreen,
   },
   productInfo: {
-    padding: 12,
+    padding: 10,
   },
   productTitle: {
     fontSize: 13,
-    fontFamily: ASBFonts.bodyBold,
+    fontWeight: '600',
     color: ASBColors.darkNavy,
     height: 36,
+    lineHeight: 18,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -374,24 +413,87 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   ratingText: {
-    fontSize: 11,
-    fontFamily: ASBFonts.bodyMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    color: ASBColors.darkNavy,
+  },
+  ratingCount: {
+    fontSize: 10,
     color: ASBColors.textMuted,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginVertical: 4,
+    marginVertical: 2,
   },
   priceText: {
-    fontSize: 16,
-    fontFamily: ASBFonts.heading,
+    fontSize: 15,
+    fontWeight: '800',
     color: ASBColors.primaryPurple,
   },
   mrpText: {
-    fontSize: 12,
+    fontSize: 11,
     color: ASBColors.textMuted,
     textDecorationLine: 'line-through',
+  },
+  toast: {
+    position: 'absolute',
+    top: 130,
+    alignSelf: 'center',
+    backgroundColor: ASBColors.goodGreen,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    zIndex: 999,
+    elevation: 10,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 360,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: ASBColors.darkNavy,
+    marginTop: 12,
+  },
+  modalSub: {
+    fontSize: 13,
+    color: ASBColors.textMuted,
+    textAlign: 'center',
+    marginVertical: 10,
+    lineHeight: 18,
+  },
+  modalBtnCol: {
+    width: '100%',
+    gap: 10,
+    marginTop: 10,
+  },
+  continueGuestBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  continueGuestText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ASBColors.textMuted,
   },
 });

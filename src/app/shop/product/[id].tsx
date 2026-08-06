@@ -10,10 +10,12 @@ import { GlassCard } from '../../../components/common/GlassCard';
 import { GradientButton } from '../../../components/common/GradientButton';
 import { useQuery } from '@tanstack/react-query';
 import { crystalApi, getImageUrl } from '../../../api/client';
+import { useCart } from '../../../context/CartContext';
 
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { addToCart } = useCart();
 
   const [qty, setQty] = useState(1);
   const [isGift, setIsGift] = useState(false);
@@ -175,7 +177,8 @@ export default function ProductDetailScreen() {
           title="Add to Cart"
           variant="crystal"
           icon={<ShoppingBag size={18} color="#FFF" />}
-          onPress={() => {
+          onPress={async () => {
+            await addToCart(product, qty);
             alert('Item added to Cart!');
             router.push('/shop/cart' as any);
           }}
