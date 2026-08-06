@@ -9,32 +9,87 @@ import { ASBColors, ASBShadows } from '../../../theme/tokens';
 import { GlassCard } from '../../../components/common/GlassCard';
 import { GradientButton } from '../../../components/common/GradientButton';
 
+import { useQuery } from '@tanstack/react-query';
+import { crystalApi, getImageUrl } from '../../../api/client';
+
 export default function CourseDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [enrolled, setEnrolled] = useState(false);
 
+  const { data: courseData, isLoading } = useQuery({
+    queryKey: ['course-detail', id],
+    queryFn: async () => {
+      if (!id) return null;
+      try {
+        const res = await crystalApi.get(`/api/courses/${id}`);
+        return res.data?.course || res.data;
+      } catch (e) {
+        console.warn('Course detail API error:', e);
+        return null;
+      }
+    },
+    enabled: !!id,
+  });
+
+  const courseRaw = courseData || null;
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ fontSize: 14, color: ASBColors.textMuted }}>Loading course details...</Text>
+      </View>
+    );
+  }
+
+  if (!courseRaw) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy }}>Course Not Found</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 12, padding: 10, backgroundColor: ASBColors.royalViolet, borderRadius: 8 }}>
+          <Text style={{ color: '#FFF', fontWeight: '700' }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const course = {
-    _id: id,
-    title: 'ASB Numerology Foundation Course',
-    instructor: 'Bhaskar Joshi',
-    duration: '12 hours',
-    price: 4999,
-    mrp: 9999,
-    ratingAvg: 4.9,
-    image: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=600',
-    description: 'Complete foundation in Chaldean & Pythagorean numerology systems. Learn how to read birth charts, calculate mystical triangles, analyze Lo Shu Grids, and provide professional numerology consultations.',
-    lessons: [
-      { title: 'Introduction to Numerology History', duration: '25 min', free: true },
-      { title: 'Chaldean vs Pythagorean Systems', duration: '40 min', free: true },
-      { title: 'Moolank & Bhagyank Calculation', duration: '35 min', free: false },
-      { title: 'Mystical Triangle Deep Analysis', duration: '50 min', free: false },
-      { title: 'Lo Shu Grid Interpretation', duration: '45 min', free: false },
-      { title: 'Name Numerology & Spelling Optimization', duration: '55 min', free: false },
-      { title: 'Mobile Number Compatibility', duration: '30 min', free: false },
-      { title: 'Profession & Career Mapping', duration: '40 min', free: false },
-    ],
+    _id: courseRaw._id,
+    title: courseRaw.title,
+    instructor: courseRaw.instructor || 'ASB Senior Expert',
+    duration: (courseRaw.lessons || []).reduce((acc: number, l: any) => acc + (l.durationSec || 0), 0) > 0
+      ? `${Math.round((courseRaw.lessons || []).reduce((acc: number, l: any) => acc + (l.durationSec || 0), 0) / 60)} mins`
+      : 'Self-Paced',
+    price: courseRaw.price || 499,
+    mrp: courseRaw.mrp || 999,
+    ratingAvg: courseRaw.ratingAvg || 4.9,
+    image: getImageUrl(courseRaw.thumbnail || courseRaw.image),
+    description: courseRaw.description || 'Comprehensive Numerology & Crystal Energy Masterclass by ASB Experts.',
+    lessons: (courseRaw.lessons || []).map((l: any) => ({
+      title: l.title || 'Lesson',
+      duration: l.durationSec ? `${Math.round(l.durationSec / 60)} min` : '15 min',
+      free: !!l.isFreePreview,
+    })),
   };
+
+  if (!course) {
+    return (
+      <View style={[styles.container, { padding: 20, paddingTop: 60, alignItems: 'center' }]}>
+        <View style={styles.navRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft size={20} color={ASBColors.darkNavy} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Course Details</Text>
+        </View>
+        <GlassCard style={{ padding: 24, marginTop: 40, alignItems: 'center', width: '100%' }}>
+          <BookOpen size={40} color={ASBColors.textMuted} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 }}>
+            {isLoading ? 'Loading Course...' : 'Course Not Found'}
+          </Text>
+        </GlassCard>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -84,7 +139,7 @@ export default function CourseDetailScreen() {
       {/* Lesson List */}
       <GlassCard style={styles.card}>
         <Text style={styles.sectionTitle}>COURSE CURRICULUM</Text>
-        {course.lessons.map((lesson, idx) => (
+        {course.lessons.map((lesson: any, idx: number) => (
           <TouchableOpacity key={idx} style={styles.lessonRow} activeOpacity={0.8}>
             <View style={[styles.lessonIcon, (lesson.free || enrolled) ? styles.lessonUnlocked : styles.lessonLocked]}>
               {(lesson.free || enrolled) ? <Play size={14} color="#FFFFFF" /> : <Lock size={14} color={ASBColors.textMuted} />}

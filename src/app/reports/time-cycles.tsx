@@ -80,14 +80,20 @@ export default function TimeCyclesScreen() {
 
   const getMonthDetailData = (monthName: string, score: number, idx: number) => {
     const monthNum = idx + 1;
-    const mVibe = reduceSingleDigit(personalYear + monthNum);
+    const apiMonth = monthlyData?.months?.[String(monthNum)];
+    const traits = apiMonth?.traits || {};
+    const mVibe = apiMonth?.value || reduceSingleDigit(personalYear + monthNum);
+
+    const posStr = traits.positive?.length ? `Strengths: ${traits.positive.join(', ')}` : '';
+    const negStr = traits.negative?.length ? `Watch out: ${traits.negative.join(', ')}` : '';
+
     return {
       name: monthName,
       score,
       vibration: mVibe,
-      focus: `Strategic planning, financial growth & relationship harmony during Month #${mVibe}.`,
-      financialOutlook: score >= 8.5 ? 'High Financial Opportunities & Growth' : 'Steady Cash Flow & Conservative Investments',
-      healthAdvice: 'Prioritize balanced sleep and 15 mins daily morning hydration.',
+      focus: traits.story || traits.meaning || apiMonth?.meaning || `Strategic planning & financial growth during Month #${mVibe}.`,
+      financialOutlook: posStr || (score >= 8.5 ? 'High Financial Opportunities & Growth' : 'Steady Cash Flow & Conservative Investments'),
+      healthAdvice: negStr || 'Prioritize balanced sleep and 15 mins daily morning hydration.',
       luckyDays: `Days ${mVibe}, ${mVibe + 9 <= 31 ? mVibe + 9 : mVibe + 2}, and ${mVibe + 18 <= 31 ? mVibe + 18 : mVibe + 5}`,
     };
   };
@@ -168,7 +174,7 @@ export default function TimeCyclesScreen() {
               <TouchableOpacity
                 key={idx}
                 activeOpacity={0.7}
-                onPress={() => setSelectedMonth(item)}
+                onPress={() => setSelectedMonth(getMonthDetailData(item.month, item.score, idx))}
                 style={styles.monthBarRow}
               >
                 <View style={styles.monthLabelCol}>

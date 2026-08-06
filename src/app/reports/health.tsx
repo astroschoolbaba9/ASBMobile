@@ -256,12 +256,23 @@ export default function HealthReportScreen() {
         </GlassCard>
       )}
 
-      {/* Organ Vulnerability Node Analysis (Dynamic from Lo Shu Grid) */}
+      {/* Organ Vulnerability Node Analysis (Dynamic from Lo Shu Grid & Live API) */}
       <GlassCard style={styles.card}>
         <View style={styles.cardTitleRow}>
           <ShieldAlert size={20} color={ASBColors.crimsonMagenta} />
           <Text style={styles.cardTitle}>Organ Vulnerability Node Analysis</Text>
         </View>
+
+        {apiHealthData?.core_vibration && (
+          <View style={{ backgroundColor: '#FEE2E2', padding: 12, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#FCA5A5' }}>
+            <Text style={{ fontSize: 11, fontFamily: ASBFonts.bodyBold, color: '#991B1B', letterSpacing: 1, marginBottom: 2 }}>
+              PRIMARY VIBRATIONAL HEALTH CORE
+            </Text>
+            <Text style={{ fontSize: 13, fontFamily: ASBFonts.bodyBold, color: '#7F1D1D' }}>
+              {apiHealthData.core_vibration}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.organRow}>
           {profile.healthVulnerabilities.map((v, idx) => {

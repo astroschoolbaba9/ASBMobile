@@ -8,7 +8,7 @@ import { Search, ShoppingCart, Star, ShieldCheck, Sparkles, LogIn } from 'lucide
 import { ASBColors, ASBShadows, ASBRadius, ASBFonts } from '../../theme/tokens';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useQuery } from '@tanstack/react-query';
-import { crystalApi } from '../../api/client';
+import { crystalApi, getImageUrl } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
 export default function MarketplaceScreen() {
@@ -27,15 +27,20 @@ export default function MarketplaceScreen() {
     { id: 'BRACELETS', label: 'Healing Bracelets' },
   ];
 
-  // Fetch Products Catalog from Real MERN API
+  // Fetch Products Catalog from Real MERN API (All 127 Products via max valid limit=100 pagination)
   const { data: rawProductsData } = useQuery({
     queryKey: ['products-catalog'],
     queryFn: async () => {
       try {
-        const res = await crystalApi.get('/api/catalog/products');
-        return res.data?.items || res.data?.products || (Array.isArray(res.data) ? res.data : []);
+        const [res1, res2] = await Promise.all([
+          crystalApi.get('/api/products?limit=100&page=1'),
+          crystalApi.get('/api/products?limit=100&page=2'),
+        ]);
+        const items1 = res1.data?.items || res1.data?.products || (Array.isArray(res1.data) ? res1.data : []);
+        const items2 = res2.data?.items || res2.data?.products || (Array.isArray(res2.data) ? res2.data : []);
+        return [...items1, ...items2];
       } catch (e) {
-        console.warn('Real MERN Products Catalog API fallback:', e);
+        console.warn('Real MERN Products Catalog API error:', e);
         return [];
       }
     },
@@ -58,89 +63,13 @@ export default function MarketplaceScreen() {
 
   const cartCount = cartData?.items?.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0) || 0;
 
-  const mockProducts = [
-    {
-      _id: '1',
-      title: 'Energised Amethyst Cluster',
-      category: 'CRYSTALS',
-      price: 1499,
-      mrp: 2499,
-      ratingAvg: 4.8,
-      image: 'https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=400',
-    },
-    {
-      _id: '2',
-      title: '5 Mukhi Rudraksha Mala (108+1 Beads)',
-      category: 'RUDRAKSHA',
-      price: 1999,
-      mrp: 3200,
-      ratingAvg: 4.9,
-      image: 'https://images.unsplash.com/photo-1611591475143-be232563e84a?w=400',
-    },
-    {
-      _id: '3',
-      title: 'Natural Pyrite Money Magnet Stone',
-      category: 'CRYSTALS',
-      price: 999,
-      mrp: 1800,
-      ratingAvg: 4.7,
-      image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400',
-    },
-    {
-      _id: '4',
-      title: '7 Chakra Healing Gemstone Bracelet',
-      category: 'BRACELETS',
-      price: 799,
-      mrp: 1499,
-      ratingAvg: 4.6,
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400',
-    },
-    {
-      _id: '5',
-      title: 'Green Aventurine Wealth Pyramid',
-      category: 'CRYSTALS',
-      price: 1299,
-      mrp: 2199,
-      ratingAvg: 4.9,
-      image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
-    },
-    {
-      _id: '6',
-      title: 'Certified Sri Yantra Copper Plate',
-      category: 'YANTRAS',
-      price: 2499,
-      mrp: 3999,
-      ratingAvg: 5.0,
-      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400',
-    },
-    {
-      _id: '7',
-      title: 'Natural Rose Quartz Love Heart Crystal',
-      category: 'GEMSTONES',
-      price: 899,
-      mrp: 1599,
-      ratingAvg: 4.8,
-      image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400',
-    },
-    {
-      _id: '8',
-      title: 'Natural Clear Quartz Healing Wand',
-      category: 'GEMSTONES',
-      price: 1699,
-      mrp: 2799,
-      ratingAvg: 4.7,
-      image: 'https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=400',
-    },
-  ];
-
-  const allProducts = rawProductsData && Array.isArray(rawProductsData) && rawProductsData.length > 0
-    ? rawProductsData
-    : mockProducts;
+  const allProducts = rawProductsData && Array.isArray(rawProductsData) ? rawProductsData : [];
 
   const productsList = allProducts.filter((item: any) => {
     const titleMatch = (item.title || item.name || '').toLowerCase().includes(search.toLowerCase());
-    const catMatch = selectedCategory === 'ALL' || (item.category || item.group || '').toUpperCase() === selectedCategory;
-    return titleMatch && (selectedCategory === 'ALL' || catMatch || true);
+    const catName = item.category || item.categoryId?.name || item.categoryId?.group || item.group || '';
+    const catMatch = selectedCategory === 'ALL' || catName.toUpperCase().includes(selectedCategory);
+    return titleMatch && catMatch;
   });
 
   const handleAddToCart = async (item: any) => {
@@ -238,7 +167,7 @@ export default function MarketplaceScreen() {
                 }}
               >
                 <View style={styles.imgContainer}>
-                  <Image source={{ uri: item.image || item.images?.[0] }} style={styles.productImg} />
+                  <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.productImg} />
                   {savings > 0 && (
                     <View style={styles.savingsBadge}>
                       <Text style={styles.savingsText}>{savings}% OFF</Text>

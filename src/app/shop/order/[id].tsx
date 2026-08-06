@@ -8,62 +8,56 @@ import { ArrowLeft, Package, Truck, MapPin, Download, CheckCircle } from 'lucide
 import { ASBColors, ASBShadows } from '../../../theme/tokens';
 import { GlassCard } from '../../../components/common/GlassCard';
 import { useQuery } from '@tanstack/react-query';
-import { crystalApi } from '../../../api/client';
+import { crystalApi, getImageUrl } from '../../../api/client';
 
 export default function OrderDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
-  const { data: orderData } = useQuery({
+  const { data: orderData, isLoading } = useQuery({
     queryKey: ['order-detail', id],
     queryFn: async () => {
       if (!id) return null;
-      const res = await crystalApi.get(`/api/orders/${id}`);
-      return res.data?.order || res.data;
+      try {
+        const res = await crystalApi.get(`/api/orders/${id}`);
+        return res.data?.order || res.data;
+      } catch (e) {
+        console.warn('Order detail API error:', e);
+        return null;
+      }
     },
     enabled: !!id,
   });
 
-  const mockOrder = {
-    _id: id || 'ORD-98212',
-    createdAt: '2026-07-28',
-    status: 'PAID',
-    fulfilmentStatus: 'SHIPPED',
-    subtotal: 2498,
-    shipping: 0,
-    total: 2498,
-    shippingAddress: {
-      fullName: 'Bhaskar Joshi',
-      phone: '9911500291',
-      line1: 'ASB Spiritual Center, Sector 62',
-      city: 'Noida',
-      state: 'Uttar Pradesh',
-      pincode: '201301',
-    },
-    tracking: {
-      courier: 'BlueDart Express',
-      trackingId: 'BD-8819203',
-      trackingUrl: 'https://www.bluedart.com/tracking?id=BD-8819203',
-    },
-    items: [
-      {
-        productId: '1',
-        title: 'Energised Amethyst Cluster',
-        price: 1499,
-        qty: 1,
-        image: 'https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=200',
-      },
-      {
-        productId: '2',
-        title: 'Natural Pyrite Money Magnet',
-        price: 999,
-        qty: 1,
-        image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=200',
-      },
-    ],
-  };
+  const order = orderData || null;
 
-  const order = orderData || mockOrder;
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ fontSize: 14, color: ASBColors.textMuted }}>Loading order details...</Text>
+      </View>
+    );
+  }
+
+  if (!order) {
+    return (
+      <View style={[styles.container, { padding: 20, paddingTop: 60, alignItems: 'center' }]}>
+        <View style={styles.navRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft size={20} color={ASBColors.darkNavy} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Order Details</Text>
+        </View>
+        <GlassCard style={{ padding: 24, marginTop: 40, alignItems: 'center', width: '100%' }}>
+          <Package size={40} color={ASBColors.textMuted} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 }}>Order Not Found</Text>
+          <Text style={{ fontSize: 12, color: ASBColors.textMuted, marginTop: 4, textAlign: 'center' }}>
+            We could not find the details for Order #{id}.
+          </Text>
+        </GlassCard>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -131,7 +125,7 @@ export default function OrderDetailScreen() {
         <Text style={styles.cardTitle}>Ordered Items ({order.items?.length || 0})</Text>
         {order.items?.map((item: any, idx: number) => (
           <View key={idx} style={styles.itemRow}>
-            <Image source={{ uri: item.image }} style={styles.itemImg} />
+            <Image source={{ uri: getImageUrl(item.image) }} style={styles.itemImg} />
             <View style={{ flex: 1 }}>
               <Text style={styles.itemTitle}>{item.title}</Text>
               <Text style={styles.itemQty}>Qty: {item.qty}</Text>

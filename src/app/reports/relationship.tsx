@@ -41,14 +41,23 @@ export default function RelationshipReportScreen() {
         const calcPercent = Math.min(98, Math.max(65, 70 + rawScore * 7));
         const ratingLabel = (bond.bucket || res.data.rating || 'HIGH SOUL MATCH').toUpperCase();
 
-        const notesList = (bond.notes || []).filter(Boolean).join(' • ');
-        const emotionalText = notesList
-          ? `Bond Status: ${bond.bucket || 'Strong'}. ${notesList}. Numerical synergy number #${res.data.combined_number || 9}.`
-          : `High emotional empathy and mutual understanding detected between ${partner1Name} (${partner1Dob}) and ${partner2Name} (${partner2Dob}). Your numerical profiles share complementary planetary frequencies.`;
+        const coreInterp = res.data.interpretations?.core || {};
+        const efNote = coreInterp['Union EF (emotional–mental blend)']?.note || coreInterp['Union EF']?.note || '';
+        const gNote = coreInterp['Shared G (relationship center)']?.meaning || coreInterp['Shared G']?.meaning || '';
+        const pNote = coreInterp['Outcome P (direction of bond)']?.meaning || coreInterp['Outcome P']?.meaning || '';
+        const specialNotes = res.data.special_notes?.notes?.join(' • ') || '';
 
-        const outlookText = res.data.core_notes?.priority
-          ? `${res.data.core_notes.priority} ${res.data.core_notes.F_trait ? 'Vibration: ' + res.data.core_notes.F_trait : ''}`
-          : `Long-term marriage stability is exceptionally favorable. Cosmic alignment indicates an ideal window for commitment and family expansion during Personal Years 2026–2027.`;
+        const emotionalText = [
+          `Bond Status: ${bond.bucket || 'Favorable'} Match (Synergy #${res.data.combined_number || 8}).`,
+          efNote ? `Emotional & Mental Blend: ${efNote}` : '',
+          gNote ? `Foundation Core: ${gNote}` : '',
+        ].filter(Boolean).join('\n\n');
+
+        const outlookText = [
+          pNote ? `Long-Term Outcome: ${pNote}` : '',
+          specialNotes ? `Special Cosmic Indicators: ${specialNotes}` : '',
+          !pNote && !specialNotes ? `Long-term marriage stability is exceptionally favorable for Personal Years 2026–2027.` : '',
+        ].filter(Boolean).join('\n\n');
 
         setReport({
           score: calcPercent,

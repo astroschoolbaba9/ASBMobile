@@ -46,39 +46,41 @@ export default function MobileNumScreen() {
         challenges,
       });
       if (res.data) {
-        setResult(res.data);
+        const raw = res.data;
+        const pairArr = Array.isArray(raw.pair_analysis) ? raw.pair_analysis : [];
+        const badPairs = pairArr.filter((p: any) => p.type === 'Bad' || p.type === 'Aggressive').map((p: any) => `${p.pair} (${p.meaning || 'Conflict'})`);
+        const goodPairs = pairArr.filter((p: any) => p.type === 'Good' || p.type === 'Favorable').map((p: any) => `${p.pair} (${p.meaning || 'Harmony'})`);
+        const badCount = badPairs.length;
+        const calculatedScore = Math.max(45, Math.min(95, 95 - badCount * 6));
+        const verdict = raw.final_result || (badCount > 4 ? 'CHALLENGING VIBRATION' : badCount > 2 ? 'MODERATE HARMONY' : 'HIGH HARMONIOUS VIBRATION');
+
+        const remediesList: string[] = [];
+        if (raw.remedies?.color_info) {
+          remediesList.push(`Favorable Color: ${raw.remedies.color_info.color || 'White'} (${raw.remedies.color_info.planet || 'Moon'}). Avoid: ${(raw.remedies.color_info.avoid || []).join(', ') || 'Dark tones'}`);
+        }
+        if (raw.remedies?.crystals && Array.isArray(raw.remedies.crystals)) {
+          remediesList.push(`Healing Crystals: ${raw.remedies.crystals.join(', ')}`);
+        }
+        if (raw.remedies?.directions && Array.isArray(raw.remedies.directions)) {
+          remediesList.push(`Auspicious Directions: ${raw.remedies.directions.join(', ')}`);
+        }
+
+        const detailsText = pairArr.map((p: any) => `${p.pair} [${p.type}]: ${p.meaning}`).join(' • ') || 'Digit sequence analyzed.';
+
+        setResult({
+          ...raw,
+          classification_numbers: typeof raw.classification === 'object' ? raw.classification : null,
+          pair_analysis: {
+            score: calculatedScore,
+            verdict,
+            bad_combinations: badPairs,
+            pair_details: detailsText,
+          },
+          remedies: remediesList.length > 0 ? remediesList : ['Keep phone screen clean', 'Avoid charging phone near bed headrest'],
+        });
       }
     } catch (e) {
-      console.warn('Mobile API primary backend offline, attempting reportApi secondary endpoint:', e);
-      try {
-        const fallbackRes = await reportApi.get('/api/numerology/mobile.json', {
-          params: { number: mobile },
-        });
-        if (fallbackRes.data) {
-          const powerNumber = fallbackRes.data.power_number || 5;
-          setResult({
-            client_info: { name, dob, mobile_number: mobile },
-            moolank: powerNumber,
-            bhagyank: (powerNumber * 2) % 9 || 9,
-            classification: 'Active Power Alignment Number',
-            pair_analysis: {
-              score: 82,
-              verdict: 'HARMONIOUS VIBRATION',
-              bad_combinations: [],
-              pair_details: 'The digit stream generates positive momentum.',
-            },
-            interpretation: `Your mobile number sums to Power Number ${powerNumber}. Positive vibration for daily communications.`,
-            remedies: [
-              'Keep phone screen clean to preserve positive vibrations',
-              'Avoid keeping phone under pillow while sleeping',
-            ],
-          });
-          setLoading(false);
-          return;
-        }
-      } catch (e2) {
-        console.warn('Mobile reportApi secondary endpoint offline, calculating locally:', e2);
-      }
+      console.warn('Mobile API fallback to local engine:', e);
       calculateMockMobile();
     } finally {
       setLoading(false);
@@ -86,28 +88,59 @@ export default function MobileNumScreen() {
   };
 
   const calculateMockMobile = () => {
-    let sum = 0;
-    for (let char of mobile) {
-      if (!isNaN(parseInt(char))) sum += parseInt(char);
+    let digitSum = 0;
+    const cleanNum = mobile.replace(/\D/g, '');
+    for (let char of cleanNum) {
+      digitSum += parseInt(char, 10);
     }
-    const powerNumber = (sum - 1) % 9 + 1;
+    while (digitSum > 9) {
+      digitSum = String(digitSum).split('').reduce((s, d) => s + parseInt(d, 10), 0);
+    }
+    const powerNumber = digitSum === 0 ? 9 : digitSum;
+
+    // Calculate Moolank & Bhagyank from DOB
+    const dobDigits = dob.replace(/\D/g, '');
+    const dayDigits = dobDigits.slice(0, 2);
+    const moolankRaw = dayDigits.split('').reduce((s, d) => s + parseInt(d, 10), 0);
+    const moolank = moolankRaw > 9 ? (moolankRaw > 9 ? String(moolankRaw).split('').reduce((s, d) => s + parseInt(d, 10), 0) : moolankRaw) : moolankRaw;
+    const bhagyankRaw = dobDigits.split('').reduce((s, d) => s + parseInt(d, 10), 0);
+    let bhagyank = bhagyankRaw;
+    while (bhagyank > 9) {
+      bhagyank = String(bhagyank).split('').reduce((s, d) => s + parseInt(d, 10), 0);
+    }
+
+    // Find double digit pairs
+    const badPairs: string[] = [];
+    for (let i = 0; i < cleanNum.length - 1; i++) {
+      const pair = cleanNum.slice(i, i + 2);
+      if (['00', '44', '88', '99', '10', '54', '98'].includes(pair)) {
+        badPairs.push(pair);
+      }
+    }
+
+    const score = Math.max(50, 92 - badPairs.length * 10);
+    const verdict = score > 80 ? 'HARMONIOUS VIBRATION' : score > 65 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION';
 
     setResult({
       client_info: { name, dob, mobile_number: mobile },
-      moolank: 2,
-      bhagyank: 6,
-      classification: 'Business Growth & Wealth Number',
-      pair_analysis: {
-        score: 85,
-        verdict: 'HARMONIOUS',
-        bad_combinations: ['99'],
-        pair_details: 'The digit pair 99 brings excess aggressive energy; remedy with silver ring.',
+      moolank: moolank || 1,
+      bhagyank: bhagyank || 5,
+      classification: `Power Number #${powerNumber} Energy Alignment`,
+      classification_numbers: {
+        friendly: [1, 3, 5, 6].filter(n => n !== moolank),
+        enemy: [2, 7, 8].filter(n => n !== moolank),
+        neutral: [4, 9].filter(n => n !== moolank),
       },
-      interpretation:
-        'Your mobile number sums to Power Number 9, aligning strongly with your Moolank 2 & Bhagyank 6. Excellent for business networking and wealth accumulation.',
+      pair_analysis: {
+        score,
+        verdict,
+        bad_combinations: badPairs,
+        pair_details: `Mobile digit total sums to Power Number ${powerNumber}. Your Soul Number ${moolank} & Destiny Number ${bhagyank} interact with this frequency.`,
+      },
+      interpretation: `Your mobile number sums to Power Number ${powerNumber}. It generates a ${verdict.toLowerCase()} for daily professional communications and wealth flow.`,
       remedies: [
-        'Set phone wallpaper to Light Blue or Silver',
-        'Avoid buying second-hand SIM cards',
+        `Keep phone wallpaper in favorable color for Power Number ${powerNumber}`,
+        'Avoid keeping phone under pillow while sleeping',
         'Keep phone screen clean to preserve positive vibrations',
       ],
     });

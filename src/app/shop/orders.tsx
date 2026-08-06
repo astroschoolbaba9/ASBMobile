@@ -16,33 +16,17 @@ export default function OrdersScreen() {
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['user-orders'],
     queryFn: async () => {
-      const res = await crystalApi.get('/api/orders/my-orders');
-      return res.data?.orders || res.data || [];
+      try {
+        const res = await crystalApi.get('/api/orders/my-orders');
+        return res.data?.orders || (Array.isArray(res.data) ? res.data : []);
+      } catch (e) {
+        console.warn('User orders API error:', e);
+        return [];
+      }
     },
   });
 
-  const mockOrders = [
-    {
-      _id: 'ORD-98212',
-      createdAt: '2026-07-28',
-      total: 2498,
-      status: 'PAID',
-      fulfilmentStatus: 'SHIPPED',
-      itemsCount: 2,
-      tracking: { courier: 'BlueDart', trackingId: 'BD-8819203' },
-    },
-    {
-      _id: 'ORD-97104',
-      createdAt: '2026-07-15',
-      total: 999,
-      status: 'PAID',
-      fulfilmentStatus: 'DELIVERED',
-      itemsCount: 1,
-      tracking: { courier: 'Delhivery', trackingId: 'DEL-4410293' },
-    },
-  ];
-
-  const orders = ordersData && ordersData.length > 0 ? ordersData : mockOrders;
+  const orders = ordersData || [];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -55,8 +39,15 @@ export default function OrdersScreen() {
       </View>
 
       {/* Orders List */}
-      <View style={styles.listContainer}>
-        {orders.map((order: any) => (
+      {orders.length === 0 ? (
+        <GlassCard style={{ padding: 24, alignItems: 'center', marginTop: 20 }}>
+          <Package size={44} color={ASBColors.textMuted} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 }}>No Orders Placed Yet</Text>
+          <Text style={{ fontSize: 12, color: ASBColors.textMuted, marginTop: 4, textAlign: 'center' }}>Your purchased spiritual remedies and crystals will appear here.</Text>
+        </GlassCard>
+      ) : (
+        <View style={styles.listContainer}>
+          {orders.map((order: any) => (
           <TouchableOpacity
             key={order._id}
             activeOpacity={0.85}
@@ -96,7 +87,8 @@ export default function OrdersScreen() {
             )}
           </TouchableOpacity>
         ))}
-      </View>
+        </View>
+      )}
     </ScrollView>
   );
 }

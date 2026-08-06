@@ -176,16 +176,18 @@ export default function ProfessionReportScreen() {
       <GlassCard style={styles.card}>
         <View style={styles.cardTitleRow}>
           <Award size={20} color={ASBColors.primaryPurple} />
-          <Text style={styles.cardTitle}>Business vs. Job Suitability</Text>
+          <Text style={styles.cardTitle}>Business vs. Job Suitability ({apiData?.stars || '4/5'})</Text>
         </View>
 
         <View style={styles.verdictBadge}>
           <CheckCircle size={14} color={ASBColors.goodGreen} />
-          <Text style={styles.verdictText}>HIGH ALIGNMENT FOR LEADERSHIP & BUSINESS</Text>
+          <Text style={styles.verdictText}>
+            {(apiData?.rating_short || 'HIGH ALIGNMENT FOR LEADERSHIP & BUSINESS').toUpperCase()}
+          </Text>
         </View>
 
         <Text style={styles.cardBody}>
-          Soul Number {profile.moolank} combined with Life Path {profile.bhagyank} indicates high natural authority, financial acumen, and strategic vision. You thrive in positions with direct decision-making power.
+          {apiData?.rating_detail || apiData?.rating_text || `Soul Number ${profile.moolank} combined with Life Path ${profile.bhagyank} indicates high natural authority, financial acumen, and strategic vision. You thrive in positions with direct decision-making power.`}
         </Text>
       </GlassCard>
 
@@ -193,7 +195,7 @@ export default function ProfessionReportScreen() {
       <GlassCard style={styles.card}>
         <View style={styles.cardTitleRow}>
           <TrendingUp size={20} color={ASBColors.crimsonMagenta} />
-          <Text style={styles.cardTitle}>Recommended Industry Domains</Text>
+          <Text style={styles.cardTitle}>Recommended Industry Domains ({industries.length})</Text>
         </View>
 
         {industries.map((ind: string, idx: number) => (

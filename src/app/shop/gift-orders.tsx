@@ -16,17 +16,17 @@ export default function GiftOrdersScreen() {
   const { data: giftData } = useQuery({
     queryKey: ['gift-orders'],
     queryFn: async () => {
-      const res = await crystalApi.get('/api/orders/my-orders?isGift=true');
-      return res.data?.orders || [];
+      try {
+        const res = await crystalApi.get('/api/orders/my-orders?isGift=true');
+        return res.data?.orders || (Array.isArray(res.data) ? res.data : []);
+      } catch (e) {
+        console.warn('Gift orders API error:', e);
+        return [];
+      }
     },
   });
 
-  const mockGifts = [
-    { _id: 'GIFT-4021', recipientName: 'Priya Sharma', occasion: 'Birthday', createdAt: '2026-07-20', status: 'DELIVERED', total: 1499 },
-    { _id: 'GIFT-3999', recipientName: 'Amit Jain', occasion: 'Wedding', createdAt: '2026-06-15', status: 'SHIPPED', total: 2999 },
-  ];
-
-  const gifts = giftData && giftData.length > 0 ? giftData : mockGifts;
+  const gifts = Array.isArray(giftData) ? giftData : [];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

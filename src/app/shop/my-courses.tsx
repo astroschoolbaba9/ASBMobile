@@ -34,12 +34,7 @@ export default function MyCoursesScreen() {
     },
   });
 
-  const mockCourses = [
-    { purchaseId: 'p1', _id: 'c1', title: 'ASB Numerology Foundation Course', purchasedAt: '2026-07-01', status: 'active', progress: 35, amountPaid: 4999 },
-    { purchaseId: 'p2', _id: 'c2', title: 'Crystal Healing & Chakra Alignment', purchasedAt: '2026-06-15', status: 'active', progress: 0, amountPaid: 2999 },
-  ];
-
-  const courses = myCourses && myCourses.length > 0 ? myCourses : mockCourses;
+  const courses = Array.isArray(myCourses) ? myCourses : [];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

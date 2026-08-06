@@ -138,23 +138,51 @@ export default function NameScreen() {
     }
     const root = prof.expression;
 
+    // Favorable Chaldean compound targets for profession
+    const targetCompound = [24, 32, 42, 51, 15, 19, 23, 37].find(c => c > compound) || (compound + 5);
+
+    // Compute dynamic spelling recommendations
+    const variations = [
+      { prefix: '', suffix: ' S', addVal: 3, reason: 'Suffix "S" (+3) shifts compound to align with financial & luxury growth.' },
+      { prefix: 'A ', suffix: '', addVal: 1, reason: 'Prefix "A" (+1) establishes royal leadership and independent authority.' },
+      { prefix: '', suffix: 'h', addVal: 5, reason: 'Adding "h" (+5) amplifies Mercury communication and trade frequencies.' },
+      { prefix: '', suffix: ' I', addVal: 1, reason: 'Adding "I" (+1) enhances intuition and creative execution power.' },
+    ];
+
+    const dynamicRecs = variations.map((v) => {
+      const newName = `${v.prefix}${inputName}${v.suffix}`.trim();
+      const newCompound = compound + v.addVal;
+      let newRoot = newCompound;
+      while (newRoot > 9) {
+        newRoot = String(newRoot).split('').reduce((s, d) => s + parseInt(d, 10), 0);
+      }
+      const isHarmonious = [1, 3, 5, 6, 9].includes(newRoot);
+      const matchScore = isHarmonious ? 95 + (newCompound % 4) : 88 + (newCompound % 5);
+      return {
+        name: newName,
+        compound: newCompound,
+        root: newRoot,
+        match: `${matchScore}%`,
+        reason: `${v.reason} (Target Compound #${newCompound}, Root #${newRoot})`,
+      };
+    });
+
+    const isNameFavorable = [1, 3, 5, 6, 9].includes(root);
+
     setResult({
       name_breakdown: {
         compound,
         root,
-        strength: compound % 2 === 0 ? 'HIGH VIBRATION' : 'EXCELLENT VIBRATION',
+        strength: isNameFavorable ? 'HIGH VIBRATION' : 'BALANCED VIBRATION',
         letters,
       },
-      target: 32,
-      compatibility: '95% HIGH MATCH',
+      target: targetCompound,
+      compatibility: isNameFavorable ? '96% HIGH HARMONY' : '84% MODERATE ALIGNMENT',
       loshu_grid: prof.loshuGrid,
       missing_numbers: prof.missingDigits,
     });
 
-    setRecommendations([
-      { name: `${inputName} S`, compound: compound + 3, root: (root + 3) % 9 || 9, match: '98%', reason: 'Adding S aligns with high financial vibration target.' },
-      { name: `A ${inputName}`, compound: compound + 1, root: (root + 1) % 9 || 9, match: '94%', reason: 'Prefix A creates royal leadership Chaldean compound.' },
-    ]);
+    setRecommendations(dynamicRecs);
   };
 
   return (

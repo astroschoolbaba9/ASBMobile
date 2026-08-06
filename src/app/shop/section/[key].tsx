@@ -8,7 +8,7 @@ import { ArrowLeft, Star, ShoppingBag, Filter } from 'lucide-react-native';
 import { ASBColors, ASBShadows } from '../../../theme/tokens';
 import { GlassCard } from '../../../components/common/GlassCard';
 import { useQuery } from '@tanstack/react-query';
-import { crystalApi } from '../../../api/client';
+import { crystalApi, getImageUrl } from '../../../api/client';
 
 export default function SectionScreen() {
   const router = useRouter();
@@ -21,9 +21,11 @@ export default function SectionScreen() {
     queryKey: ['section-products', sectionKey, activeCategory],
     queryFn: async () => {
       try {
-        const res = await crystalApi.get(`/api/catalog/products?section=${sectionKey}&category=${activeCategory}`);
+        const catQuery = activeCategory !== 'All' ? `&category=${activeCategory}` : '';
+        const res = await crystalApi.get(`/api/products?limit=100&section=${sectionKey}${catQuery}`);
         return res.data?.items || res.data?.products || (Array.isArray(res.data) ? res.data : []);
       } catch (e) {
+        console.warn('Section products API error:', e);
         return [];
       }
     },
@@ -39,13 +41,7 @@ export default function SectionScreen() {
 
   const categories = ['All', 'Popular', 'New Arrivals', 'Budget Friendly', 'Premium'];
 
-  const mockProducts = [
-    { _id: 's1', title: 'Energised Pyrite Gift Set', price: 1499, mrp: 2499, ratingAvg: 4.9, image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400' },
-    { _id: 's2', title: '7 Chakra Healing Bracelet Set', price: 899, mrp: 1599, ratingAvg: 4.8, image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400' },
-    { _id: 's3', title: 'Rudraksha Blessing Box', price: 2199, mrp: 3499, ratingAvg: 4.9, image: 'https://images.unsplash.com/photo-1611591475143-be232563e84a?w=400' },
-  ];
-
-  const list = sectionData && Array.isArray(sectionData) && sectionData.length > 0 ? sectionData : mockProducts;
+  const list = Array.isArray(sectionData) ? sectionData : [];
 
   return (
     <View style={styles.container}>
@@ -79,20 +75,27 @@ export default function SectionScreen() {
         keyExtractor={(item) => item._id}
         numColumns={2}
         contentContainerStyle={styles.gridContent}
-        columnWrapperStyle={{ gap: 12 }}
+        columnWrapperStyle={list.length > 1 ? { gap: 12 } : undefined}
+        ListEmptyComponent={
+          <GlassCard style={{ padding: 24, alignItems: 'center', marginTop: 20 }}>
+            <ShoppingBag size={40} color={ASBColors.textMuted} />
+            <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 }}>No Products Found</Text>
+            <Text style={{ fontSize: 12, color: ASBColors.textMuted, marginTop: 4, textAlign: 'center' }}>Check back soon for new spiritual items in this category.</Text>
+          </GlassCard>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.card, ASBShadows.cardRest]}
             activeOpacity={0.85}
             onPress={() => router.push(`/shop/product/${item._id}` as any)}
           >
-            <Image source={{ uri: item.image }} style={styles.productImg} />
+            <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.productImg} />
             <View style={styles.cardInfo}>
               <View style={styles.ratingRow}>
                 <Star size={12} color="#F59E0B" fill="#F59E0B" />
-                <Text style={styles.ratingText}>{item.ratingAvg}</Text>
+                <Text style={styles.ratingText}>{item.ratingAvg || 4.8}</Text>
               </View>
-              <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.productTitle} numberOfLines={2}>{item.title || item.name}</Text>
               <View style={styles.priceRow}>
                 <Text style={styles.priceVal}>₹{item.price}</Text>
                 {item.mrp > item.price && <Text style={styles.mrpVal}>₹{item.mrp}</Text>}

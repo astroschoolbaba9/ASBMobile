@@ -49,32 +49,32 @@ export default function SwotAnalysisScreen() {
 
   // Dynamic SWOT Generator based on Moolank & Missing Lo Shu Digits or Backend Report
   const getDynamicSwot = () => {
+    const pairCombined = backendSwot?.mulank_bhagyank?.pair_meaning?.combined;
+
     const s = [
+      ...(pairCombined?.strengths || []),
       `Soul Number ${profile.moolank}: Natural leadership and intuitive strategic clarity.`,
       `Life Path ${profile.bhagyank}: High adaptability in financial and corporate environments.`,
       `Present Lo Shu Digits (${profile.presentDigits.join(', ')}): Strong vibrational foundation for execution.`,
     ];
 
     const w = [
+      ...(pairCombined?.weakness || []),
       `Missing Lo Shu Digits (${profile.missingDigits.join(', ')}): Potential gaps in daily routine discipline.`,
       `Personal Year #${profile.personalYear}: Guard against impatience during transition phases.`,
-      `Susceptibility to mental fatigue under multi-tasking stress.`,
     ];
 
     const o = [
+      pairCombined?.summary ? `Chaldean Pair Overview: ${pairCombined.summary}` : '',
       `Favorable expansion window during Personal Year #${profile.personalYear} cycles.`,
       `High returns when aligning brand name with target compound Chaldean numbers.`,
       `Strategic alliances with complementary Soul Numbers.`,
-    ];
+    ].filter(Boolean);
 
     const t = [
       `Avoid impulsive financial commitments during Personal Month #${profile.personalMonth}.`,
       `Ensure contractual terms are reviewed thoroughly before signing.`,
     ];
-
-    if (backendSwot?.traits) {
-      if (backendSwot.traits.F_trait) s.push(`Core Trait: ${backendSwot.traits.F_trait}`);
-    }
 
     return { s, w, o, t };
   };

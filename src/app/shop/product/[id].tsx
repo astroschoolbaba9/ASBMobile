@@ -9,7 +9,7 @@ import { ASBColors, ASBShadows } from '../../../theme/tokens';
 import { GlassCard } from '../../../components/common/GlassCard';
 import { GradientButton } from '../../../components/common/GradientButton';
 import { useQuery } from '@tanstack/react-query';
-import { crystalApi } from '../../../api/client';
+import { crystalApi, getImageUrl } from '../../../api/client';
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -21,38 +21,55 @@ export default function ProductDetailScreen() {
   const [giftMessage, setGiftMessage] = useState('');
   const [recipientName, setRecipientName] = useState('');
 
-  const { data: productData } = useQuery({
+  const { data: productData, isLoading } = useQuery({
     queryKey: ['product-detail', id],
     queryFn: async () => {
       if (!id) return null;
       try {
-        const res = await crystalApi.get(`/api/catalog/products/${id}`);
-        return res.data?.product || res.data;
+        const res = await crystalApi.get(`/api/products/${id}`);
+        return res.data?.product || res.data?.item || res.data;
       } catch (e) {
+        console.warn('Product detail API error:', e);
         return null;
       }
     },
     enabled: !!id,
   });
 
-  const mockProduct = {
-    _id: id || '1',
-    title: 'Energised Amethyst Cluster (High Vibration)',
-    price: 1499,
-    mrp: 2499,
-    ratingAvg: 4.8,
-    ratingCount: 124,
-    description:
-      'Natural energised Amethyst crystal cluster for crown chakra activation, mental peace, protection against negative vibrations, and meditation enhancement.',
-    spiritualUse: 'Place in northeastern quadrant of home or office to amplify positive spiritual energy.',
-    careHandling: 'Cleanse with mild saltwater or under moonlight during full moon cycles.',
-    images: ['https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=600'],
-  };
+  const product = productData || null;
 
-  const product = (productData && productData.title) ? productData : mockProduct;
-  const price = product.price || 999;
-  const mrp = product.mrp || 1499;
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ fontSize: 14, color: ASBColors.textMuted }}>Loading product details...</Text>
+      </View>
+    );
+  }
+
+  if (!product) {
+    return (
+      <View style={[styles.container, { padding: 20, paddingTop: 60, alignItems: 'center' }]}>
+        <View style={styles.navRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft size={20} color={ASBColors.darkNavy} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>Product Details</Text>
+        </View>
+        <GlassCard style={{ padding: 24, marginTop: 40, alignItems: 'center', width: '100%' }}>
+          <ShoppingBag size={40} color={ASBColors.textMuted} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 }}>Product Not Found</Text>
+          <Text style={{ fontSize: 12, color: ASBColors.textMuted, marginTop: 4, textAlign: 'center' }}>
+            We could not find the item you are looking for.
+          </Text>
+        </GlassCard>
+      </View>
+    );
+  }
+
+  const price = product.price || 0;
+  const mrp = product.mrp || price;
   const savings = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  const productImg = getImageUrl(product.image || product.images?.[0]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -68,7 +85,7 @@ export default function ProductDetailScreen() {
 
       {/* Product Image Gallery */}
       <View style={styles.imgContainer}>
-        <Image source={{ uri: product.images?.[0] || mockProduct.images[0] }} style={styles.productImg} />
+        <Image source={{ uri: productImg }} style={styles.productImg} />
         {savings > 0 && (
           <View style={styles.savingsBadge}>
             <Text style={styles.savingsText}>{savings}% DISCOUNT</Text>

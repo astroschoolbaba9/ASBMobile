@@ -9,33 +9,44 @@ import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 
+import { useQuery } from '@tanstack/react-query';
+import { crystalApi, getImageUrl } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+
 export default function CartScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-  const [cartItems, setCartItems] = useState([
-    {
-      id: '1',
-      title: 'Energised Amethyst Cluster',
-      price: 1499,
-      mrp: 2499,
-      qty: 1,
-      image: 'https://images.unsplash.com/photo-1567696911980-2eed69a46042?w=200',
+  const { data: cartData, refetch } = useQuery({
+    queryKey: ['cart-page', isAuthenticated],
+    queryFn: async () => {
+      if (!isAuthenticated) return null;
+      try {
+        const res = await crystalApi.get('/api/cart');
+        return res.data;
+      } catch (e) {
+        console.warn('Cart API fetch error:', e);
+        return null;
+      }
     },
-    {
-      id: '2',
-      title: '5 Mukhi Rudraksha Mala',
-      price: 1999,
-      mrp: 3200,
-      qty: 1,
-      image: 'https://images.unsplash.com/photo-1611591475143-be232563e84a?w=200',
-    },
-  ]);
+    enabled: isAuthenticated,
+  });
+
+  const cartItems = (cartData?.items || []).map((item: any) => ({
+    id: item._id || item.productId?._id || item.productId,
+    productId: item.productId?._id || item.productId || item.id,
+    title: item.title || item.productId?.title || item.productId?.name || 'Spiritual Item',
+    price: item.price || item.productId?.price || 999,
+    mrp: item.mrp || item.productId?.mrp || 1499,
+    qty: item.quantity || item.qty || 1,
+    image: getImageUrl(item.image || item.productId?.images?.[0] || item.productId?.image),
+  }));
 
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const shipping = subtotal > 999 ? 0 : 99;
+  const subtotal = cartItems.reduce((sum: number, item: any) => sum + item.price * item.qty, 0);
+  const shipping = subtotal > 999 || subtotal === 0 ? 0 : 99;
   const grandTotal = Math.max(0, subtotal - discount + shipping);
 
   const handleApplyCoupon = () => {
@@ -47,20 +58,27 @@ export default function CartScreen() {
     }
   };
 
-  const updateQty = (id: string, delta: number) => {
-    setCartItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const newQty = Math.max(1, item.qty + delta);
-          return { ...item, qty: newQty };
-        }
-        return item;
-      })
-    );
+  const updateQty = async (productId: string, delta: number) => {
+    const item = cartItems.find((i: any) => i.id === productId || i.productId === productId);
+    if (!item) return;
+    const newQty = Math.max(1, item.qty + delta);
+    try {
+      await crystalApi.post('/api/cart/items', { productId: item.productId, quantity: delta });
+      await refetch();
+    } catch (e) {
+      console.warn('Update cart qty error:', e);
+    }
   };
 
-  const removeItem = (id: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  const removeItem = async (productId: string) => {
+    const item = cartItems.find((i: any) => i.id === productId || i.productId === productId);
+    if (!item) return;
+    try {
+      await crystalApi.delete(`/api/cart/items/${item.productId}`);
+      await refetch();
+    } catch (e) {
+      console.warn('Remove cart item error:', e);
+    }
   };
 
   return (
@@ -88,7 +106,7 @@ export default function CartScreen() {
       ) : (
         <View style={{ gap: 14 }}>
           {/* Cart Item List */}
-          {cartItems.map((item) => (
+          {cartItems.map((item: any) => (
             <GlassCard key={item.id} style={styles.itemCard}>
               <Image source={{ uri: item.image }} style={styles.itemImg} />
               <View style={styles.itemCol}>
