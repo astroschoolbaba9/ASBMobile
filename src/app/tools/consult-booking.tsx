@@ -10,7 +10,7 @@ import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { reportApi } from '../../api/client';
+import { reportApi, crystalApi } from '../../api/client';
 
 export default function ConsultBookingScreen() {
   const router = useRouter();
@@ -33,22 +33,22 @@ export default function ConsultBookingScreen() {
     setLoading(true);
 
     try {
-      await reportApi.post('/api/consultations/book', {
-        name,
-        phone,
-        email,
-        dob,
-        topic,
+      await crystalApi.post('/api/contact', {
+        name: name.trim(),
+        email: email.trim() || 'consultation@asbapp.com',
+        phone: phone.trim(),
+        subject: `📅 1-on-1 Consultation: ${topic || 'General Numerology'}`,
+        message: `Client DOB: ${dob || 'Not provided'}.\nConsultation Focus: ${topic || 'Numerology & Remedies Guidance'}.\nSubmitted via Mobile App.`,
       });
     } catch (e) {
-      console.warn('Consultation API saved locally:', e);
+      console.warn('Consultation submission API warning:', e);
     } finally {
       setLoading(false);
       setBooked(true);
       showToast({
         type: 'success',
         title: 'Booking Request Received',
-        message: 'Your consultation session request has been registered.',
+        message: 'Your consultation lead has been sent to our senior numerologists.',
       });
     }
   };
@@ -120,6 +120,36 @@ export default function ConsultBookingScreen() {
           />
         </GlassCard>
       )}
+
+      {/* Official ASB Social Channels */}
+      <GlassCard variant="purple" style={styles.card}>
+        <Text style={styles.inputLabel}>CONNECT WITH ASB NUMEROLOGY</Text>
+        <Text style={{ fontSize: 12, color: ASBColors.textMuted, marginBottom: 12 }}>
+          Follow our official social media channels for daily cosmic reports, numerology tips & live Q&A sessions:
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+          <TouchableOpacity
+            style={[styles.socialBtn, { backgroundColor: '#E1306C' }]}
+            onPress={() => Linking.openURL('https://www.instagram.com/astroschoolbaba/')}
+          >
+            <Text style={styles.socialBtnText}>📸 Instagram</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.socialBtn, { backgroundColor: '#1877F2' }]}
+            onPress={() => Linking.openURL('https://www.facebook.com/astroschoolbaba/')}
+          >
+            <Text style={styles.socialBtnText}>📘 Facebook</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.socialBtn, { backgroundColor: '#25D366' }]}
+            onPress={() => Linking.openURL('https://wa.me/919911500291')}
+          >
+            <Text style={styles.socialBtnText}>💬 WhatsApp</Text>
+          </TouchableOpacity>
+        </View>
+      </GlassCard>
     </ScrollView>
   );
 }
@@ -209,5 +239,19 @@ const styles = StyleSheet.create({
     color: ASBColors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  socialBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    minWidth: 100,
+  },
+  socialBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

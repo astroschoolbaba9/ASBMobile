@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Mail, Phone, Calendar, CreditCard, Edit3, LogOut, Package, Gift, BookOpen, FileText, ShieldCheck, X, Check } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Phone, Calendar, CreditCard, Edit3, LogOut, Package, Gift, BookOpen, FileText, ShieldCheck, X, Check, Sparkles } from 'lucide-react-native';
 import { ASBColors, ASBFonts, ASBShadows } from '../theme/tokens';
 import { GlassCard } from '../components/common/GlassCard';
 import { GradientButton } from '../components/common/GradientButton';
@@ -213,6 +213,22 @@ export default function ProfileScreen() {
           { label: 'Gift Orders', icon: <Gift size={18} color={ASBColors.crimsonMagenta} />, route: '/shop/gift-orders' },
           { label: 'My Courses', icon: <BookOpen size={18} color={ASBColors.primaryPurple} />, route: '/shop/my-courses' },
           { label: 'Saved Addresses', icon: <FileText size={18} color={ASBColors.sacredGold} />, route: '/shop/addresses' },
+        ].map((item) => (
+          <TouchableOpacity key={item.label} style={styles.navItem} onPress={() => router.push(item.route as any)}>
+            {item.icon}
+            <Text style={styles.navItemText}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </GlassCard>
+
+      {/* Legal Policies & Information */}
+      <GlassCard style={styles.card}>
+        <Text style={styles.sectionTitle}>LEGAL & INFORMATION</Text>
+        {[
+          { label: 'Privacy Policy', icon: <ShieldCheck size={18} color={ASBColors.royalViolet} />, route: '/info/privacy' },
+          { label: 'Terms & Conditions', icon: <FileText size={18} color={ASBColors.primaryPurple} />, route: '/info/terms' },
+          { label: 'About ASB Numerology', icon: <Sparkles size={18} color={ASBColors.sacredGold} />, route: '/info/about' },
+          { label: 'Contact Us & Support', icon: <Phone size={18} color={ASBColors.crimsonMagenta} />, route: '/info/contact' },
         ].map((item) => (
           <TouchableOpacity key={item.label} style={styles.navItem} onPress={() => router.push(item.route as any)}>
             {item.icon}

@@ -61,23 +61,34 @@ export const AiAssistantSheet: React.FC = () => {
         name: user?.name,
       });
 
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: res.data?.reply || res.data?.message || 'The cosmic energies indicate a positive transition period ahead.',
-      };
-      setMessages((prev) => [...prev, aiMsg]);
+      const reply = res.data?.reply || res.data?.message;
+      if (reply) {
+        setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: reply }]);
+        setLoading(false);
+        return;
+      }
     } catch (e) {
-      console.error('Chatbot API error:', e);
-      const fallbackMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: 'Your current numerical vibrations suggest focusing on inner alignment and leadership growth this cycle.',
-      };
-      setMessages((prev) => [...prev, fallbackMsg]);
-    } finally {
-      setLoading(false);
+      console.warn('Chatbot API warning - invoking local numerology intelligence engine:', e);
     }
+
+    // Smart Local Cosmic Numerology Intelligence Engine
+    const lower = textToSend.toLowerCase();
+    let smartReply = '✨ Based on your birth blueprint and Chaldean vibrations, this cycle favors patience, strategic planning, and gemstone energy alignment.';
+
+    if (lower.includes('love') || lower.includes('partner') || lower.includes('confess')) {
+      smartReply = `💖 Love Insight for ${user?.name || 'Seeker'}: Your driver frequency indicates strong emotional depth. A major heart chakra alignment period opens up in your current Personal Month cycle. Wear Rose Quartz for harmony.`;
+    } else if (lower.includes('marry') || lower.includes('marriage') || lower.includes('wedding')) {
+      smartReply = `💍 Marriage & Synastry: Favorable marriage transits align when Personal Years resonance hits 3, 6, or 9. Conduct a full synastry compatibility check before setting dates.`;
+    } else if (lower.includes('job') || lower.includes('career') || lower.includes('promote') || lower.includes('salary')) {
+      smartReply = `💼 Career Alignment: Solar & Jupiter vibrations favor career growth in Q3. Focus on leadership and public presentation. Wearing Pyrite or Citrine boosts financial momentum.`;
+    } else if (lower.includes('study') || lower.includes('exam') || lower.includes('abroad') || lower.includes('education')) {
+      smartReply = `🎓 Education & Intellect: Mercury energy supports deep focus. Keep a Clear Quartz tower on your study table to enhance memory retention and exam success.`;
+    } else if (lower.includes('business') || lower.includes('invest') || lower.includes('launch')) {
+      smartReply = `💰 Wealth & Business: Chaldean compound vibrations recommend launching new ventures on dates reducing to 1, 5, or 6. Place a Shree Vyapar Vriddhi Yantra in your workspace.`;
+    }
+
+    setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), sender: 'ai', text: smartReply }]);
+    setLoading(false);
   };
 
   return (

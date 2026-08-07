@@ -2,9 +2,9 @@
 // Product Detail Screen with Gift Customization Options & Reviews
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Switch, Modal } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Star, ShoppingBag, Gift, Truck, ShieldCheck, Heart } from 'lucide-react-native';
+import { ArrowLeft, Star, ShoppingBag, Gift, Truck, ShieldCheck, Heart, X } from 'lucide-react-native';
 import { ASBColors, ASBShadows } from '../../../theme/tokens';
 import { GlassCard } from '../../../components/common/GlassCard';
 import { GradientButton } from '../../../components/common/GradientButton';
@@ -73,7 +73,15 @@ export default function ProductDetailScreen() {
   const price = product.price || 0;
   const mrp = product.mrp || price;
   const savings = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const productImg = getImageUrl(product.image || product.images?.[0]);
+  const [selectedImgIndex, setSelectedImgIndex] = useState(0);
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+
+  const rawImages: string[] = Array.isArray(product.images) && product.images.length > 0
+    ? product.images
+    : [product.image].filter(Boolean);
+
+  const imagesList = rawImages.length > 0 ? rawImages : ['/uploads/placeholder.jpg'];
+  const activeImgUri = getImageUrl(imagesList[selectedImgIndex] || imagesList[0]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -87,15 +95,70 @@ export default function ProductDetailScreen() {
         </Text>
       </View>
 
-      {/* Product Image Gallery */}
-      <View style={styles.imgContainer}>
-        <Image source={{ uri: productImg }} style={styles.productImg} />
+      {/* Hero Product Image */}
+      <TouchableOpacity activeOpacity={0.9} onPress={() => setZoomModalOpen(true)} style={styles.imgContainer}>
+        <Image source={{ uri: activeImgUri }} style={styles.productImg} resizeMode="contain" />
         {savings > 0 && (
           <View style={styles.savingsBadge}>
             <Text style={styles.savingsText}>{savings}% DISCOUNT</Text>
           </View>
         )}
-      </View>
+        <View style={styles.zoomHintBadge}>
+          <Text style={styles.zoomHintText}>🔍 Tap to Zoom</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Multi-Image Gallery Thumbnails */}
+      {imagesList.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4 }}>
+            {imagesList.map((img, idx) => {
+              const uri = getImageUrl(img);
+              const isSelected = idx === selectedImgIndex;
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => setSelectedImgIndex(idx)}
+                  style={[
+                    styles.thumbnailCard,
+                    isSelected && { borderColor: ASBColors.primaryPurple, borderWidth: 2 },
+                  ]}
+                >
+                  <Image source={{ uri }} style={styles.thumbnailImg} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Full-Screen Zoom Lightbox Modal */}
+      <Modal visible={zoomModalOpen} transparent animationType="fade" onRequestClose={() => setZoomModalOpen(false)}>
+        <View style={styles.lightboxContainer}>
+          <TouchableOpacity style={styles.lightboxCloseBtn} onPress={() => setZoomModalOpen(false)}>
+            <X size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <Image source={{ uri: activeImgUri }} style={styles.lightboxFullImg} resizeMode="contain" />
+
+          {imagesList.length > 1 && (
+            <View style={styles.lightboxThumbRow}>
+              {imagesList.map((img, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => setSelectedImgIndex(idx)}
+                  style={[
+                    styles.lightboxThumb,
+                    idx === selectedImgIndex && { borderColor: '#FFFFFF', borderWidth: 2 },
+                  ]}
+                >
+                  <Image source={{ uri: getImageUrl(img) }} style={{ width: 44, height: 44, borderRadius: 6 }} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      </Modal>
 
       {/* Product Info Card */}
       <GlassCard style={styles.card}>
@@ -378,5 +441,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: ASBColors.darkNavy,
+  },
+  zoomHintBadge: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(26, 11, 46, 0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  zoomHintText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  thumbnailCard: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+  },
+  thumbnailImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  lightboxContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxCloseBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+  },
+  lightboxFullImg: {
+    width: '90%',
+    height: '70%',
+  },
+  lightboxThumbRow: {
+    flexDirection: 'row',
+    gap: 10,
+    position: 'absolute',
+    bottom: 40,
+  },
+  lightboxThumb: {
+    borderRadius: 8,
+    overflow: 'hidden',
   },
 });

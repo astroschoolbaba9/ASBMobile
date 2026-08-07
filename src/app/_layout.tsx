@@ -45,7 +45,11 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  if (!fontsLoaded || showSplash) {
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  if (showSplash) {
     return <AnimatedSplashScreen onFinish={() => setShowSplash(false)} />;
   }
 

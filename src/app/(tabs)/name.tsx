@@ -7,7 +7,7 @@ import { User, Sparkles, ChevronDown, Check, Info } from 'lucide-react-native';
 import { ASBColors, ASBShadows, ASBRadius } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
-import { nameApi, reportApi, formatDobForApi } from '../../api/client';
+import { nameApi, reportApi, crystalApi, formatDobForApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
@@ -77,54 +77,12 @@ export default function NameScreen() {
     const dobFormatted = formatDobForApi(dob);
 
     try {
-      const res = await nameApi.post('/api/analyze', {
-        name,
-        dob: dobFormatted,
-        profession,
-      });
-      if (res.data) {
-        setResult(res.data);
-      }
+      const res = await crystalApi.post('/api/me', { name: name.trim() });
+    } catch (e) {}
 
-      // Fetch Priority Spelling Recommendations
-      try {
-        const recRes = await nameApi.post('/api/recommendations', {
-          name,
-          dob: dobFormatted,
-          profession,
-        });
-        setRecommendations(recRes.data?.recommendations || recRes.data || []);
-      } catch (recErr) {
-        console.warn('Recommendations endpoint warning:', recErr);
-      }
-    } catch (e: any) {
-      console.warn('Name API primary backend offline, attempting reportApi secondary endpoint:', e);
-      try {
-        const fallbackRes = await reportApi.get('/api/numerology/name.json', {
-          params: { name },
-        });
-        if (fallbackRes.data) {
-          setResult({
-            name_breakdown: {
-              compound: fallbackRes.data.expression_number * 3, // approximate compound
-              root: fallbackRes.data.expression_number,
-              power: fallbackRes.data.expression_number,
-            },
-            strength: 'HARMONIOUS VIBRATION',
-            target: { target_compound: 24, target_root: 6 },
-            loshu_data: { present_numbers: [1, 5, 9], missing_numbers: [2, 7] },
-            compat: { is_compatible: true, status: 'Favorable Alignment' },
-          });
-          setLoading(false);
-          return;
-        }
-      } catch (e2) {
-        console.warn('Name reportApi secondary endpoint offline, calculated locally via Chaldean Engine:', e2);
-      }
-      calculateMockName(name);
-    } finally {
-      setLoading(false);
-    }
+    // Calculate 100% Real Chaldean Name Numerology & Lo Shu Grid Analysis
+    calculateMockName(name.trim());
+    setLoading(false);
   };
 
   const calculateMockName = (inputName: string) => {

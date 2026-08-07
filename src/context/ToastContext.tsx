@@ -114,7 +114,7 @@ export function useToast() {
 const styles = StyleSheet.create({
   toastContainer: {
     position: 'absolute',
-    top: 40,
+    top: Platform.OS === 'ios' ? 54 : 36,
     left: 16,
     right: 16,
     zIndex: 99999,

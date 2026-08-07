@@ -2,9 +2,10 @@
 // Checkout Screen & Order Placement Handler (Backend Admin Sync)
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CreditCard, Truck, CheckCircle } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
@@ -75,65 +76,115 @@ export default function CheckoutScreen() {
     }
   };
 
-  // GPS Location Auto-fill (Amazon / Flipkart style)
-  const handleUseCurrentLocation = () => {
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      setLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-            const data = await res.json();
-            if (data?.address) {
-              const addr = data.address;
-              const extractedPin = addr.postcode ? addr.postcode.replace(/\s+/g, '') : '';
-              const extractedCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || '';
-              const extractedState = addr.state || '';
-              const extractedStreet = [addr.house_number, addr.building, addr.road, addr.suburb, addr.neighbourhood].filter(Boolean).join(', ');
-
-              if (extractedPin) setPincode(extractedPin);
-              if (extractedCity) setCity(extractedCity);
-              if (extractedState) setState(extractedState);
-              if (extractedStreet) setLine1(extractedStreet);
-
-              // If pin is available, perform pin verification
-              if (extractedPin && extractedPin.length === 6) {
-                await lookupPincode(extractedPin);
-              } else {
-                showToast({
-                  type: 'success',
-                  title: '📍 GPS Location Detected',
-                  message: `Auto-filled: ${extractedCity || 'City'}, ${extractedState || 'State'}.`,
-                });
-              }
-            }
-          } catch (e) {
-            showToast({
-              type: 'info',
-              title: '📍 Location Retrieved',
-              message: 'GPS coordinates retrieved. Please verify pincode & city.',
-            });
-          } finally {
-            setLocating(false);
-          }
-        },
-        (err) => {
+  // GPS Location Auto-fill (Native Expo Location + Web Geolocation fallback)
+  const handleUseCurrentLocation = async () => {
+    setLocating(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
           setLocating(false);
           showToast({
             type: 'error',
-            title: '📍 Location Permission',
-            message: 'Unable to detect GPS position. Please enter your address manually.',
+            title: '📍 Location Permission Denied',
+            message: 'Please grant location permission to auto-fill address.',
           });
-        },
-        { enableHighAccuracy: true, timeout: 12000 }
-      );
-    } else {
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const reverse = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        if (reverse && reverse.length > 0) {
+          const item = reverse[0];
+          const extractedPin = item.postalCode ? item.postalCode.replace(/\s+/g, '') : '';
+          const extractedCity = item.city || item.subregion || item.district || '';
+          const extractedState = item.region || '';
+          const extractedStreet = [item.name, item.streetNumber, item.street, item.district].filter(Boolean).join(', ');
+
+          if (extractedPin) setPincode(extractedPin);
+          if (extractedCity) setCity(extractedCity);
+          if (extractedState) setState(extractedState);
+          if (extractedStreet) setLine1(extractedStreet);
+
+          if (extractedPin && extractedPin.length === 6) {
+            await lookupPincode(extractedPin);
+          } else {
+            showToast({
+              type: 'success',
+              title: '📍 GPS Location Detected',
+              message: `Auto-filled: ${extractedCity || 'City'}, ${extractedState || 'State'}.`,
+            });
+          }
+        }
+      } else if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+              const data = await res.json();
+              if (data?.address) {
+                const addr = data.address;
+                const extractedPin = addr.postcode ? addr.postcode.replace(/\s+/g, '') : '';
+                const extractedCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || '';
+                const extractedState = addr.state || '';
+                const extractedStreet = [addr.house_number, addr.building, addr.road, addr.suburb, addr.neighbourhood].filter(Boolean).join(', ');
+
+                if (extractedPin) setPincode(extractedPin);
+                if (extractedCity) setCity(extractedCity);
+                if (extractedState) setState(extractedState);
+                if (extractedStreet) setLine1(extractedStreet);
+
+                if (extractedPin && extractedPin.length === 6) {
+                  await lookupPincode(extractedPin);
+                } else {
+                  showToast({
+                    type: 'success',
+                    title: '📍 GPS Location Detected',
+                    message: `Auto-filled: ${extractedCity || 'City'}, ${extractedState || 'State'}.`,
+                  });
+                }
+              }
+            } catch (e) {
+              showToast({
+                type: 'info',
+                title: '📍 Location Retrieved',
+                message: 'GPS coordinates retrieved. Please verify pincode & city.',
+              });
+            } finally {
+              setLocating(false);
+            }
+          },
+          (err) => {
+            setLocating(false);
+            showToast({
+              type: 'error',
+              title: '📍 Location Permission',
+              message: 'Unable to detect GPS position. Please enter your address manually.',
+            });
+          },
+          { enableHighAccuracy: true, timeout: 12000 }
+        );
+        return;
+      } else {
+        showToast({
+          type: 'error',
+          title: '📍 GPS Unavailable',
+          message: 'GPS location is not supported on this device. Please fill in details manually.',
+        });
+      }
+    } catch (err) {
       showToast({
         type: 'error',
-        title: '📍 GPS Unavailable',
-        message: 'GPS location is not supported on this browser. Please fill in details manually.',
+        title: '📍 Location Error',
+        message: 'Could not fetch current GPS location. Please type your address.',
       });
+    } finally {
+      setLocating(false);
     }
   };
 

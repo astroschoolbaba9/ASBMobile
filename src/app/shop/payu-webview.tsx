@@ -8,6 +8,7 @@ import { ShieldCheck, X } from 'lucide-react-native';
 import { ASBColors } from '../../theme/tokens';
 import { useCart } from '../../context/CartContext';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import * as WebBrowser from 'expo-web-browser';
 
 let WebViewComponent: any = null;
 try {
@@ -143,8 +144,19 @@ export default function PayUWebViewScreen() {
         />
       ) : (
         <View style={styles.fallbackBox}>
-          <Text style={styles.fallbackTitle}>Payment Gateway Unavailable</Text>
-          <Text style={styles.fallbackSub}>Please go back and try again, or choose Cash on Delivery.</Text>
+          <ShieldCheck size={48} color={ASBColors.primaryPurple} />
+          <Text style={styles.fallbackTitle}>PayU Checkout Ready</Text>
+          <Text style={styles.fallbackSub}>Tap below to open the secure PayU gateway on your mobile device.</Text>
+          <TouchableOpacity
+            style={styles.openBrowserBtn}
+            onPress={async () => {
+              if (decodedUrl) {
+                await WebBrowser.openBrowserAsync(decodedUrl);
+              }
+            }}
+          >
+            <Text style={styles.openBrowserText}>🔐 Launch PayU Gateway</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -196,6 +208,18 @@ const styles = StyleSheet.create({
   webContainer: { flex: 1, width: '100%' },
   errorText: { fontSize: 14, color: ASBColors.errorRed, textAlign: 'center', marginTop: 40 },
   fallbackBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  fallbackTitle: { fontSize: 18, fontWeight: '700', color: ASBColors.darkNavy },
+  fallbackTitle: { fontSize: 18, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 },
   fallbackSub: { fontSize: 13, color: ASBColors.textMuted, marginTop: 6, textAlign: 'center' },
+  openBrowserBtn: {
+    marginTop: 20,
+    backgroundColor: ASBColors.primaryPurple,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  openBrowserText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });
