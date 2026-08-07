@@ -93,7 +93,7 @@ export default function SectionScreen() {
             <View style={styles.cardInfo}>
               <View style={styles.ratingRow}>
                 <Star size={12} color="#F59E0B" fill="#F59E0B" />
-                <Text style={styles.ratingText}>{item.ratingAvg || 4.8}</Text>
+                <Text style={styles.ratingText}>{item.ratingAvg ? item.ratingAvg : 'New'}</Text>
               </View>
               <Text style={styles.productTitle} numberOfLines={2}>{item.title || item.name}</Text>
               <View style={styles.priceRow}>

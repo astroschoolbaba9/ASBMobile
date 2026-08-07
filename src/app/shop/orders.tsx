@@ -59,7 +59,9 @@ export default function OrdersScreen() {
                 <Package size={18} color={ASBColors.royalViolet} />
                 <Text style={styles.orderId}>Order #{order._id}</Text>
               </View>
-              <Text style={styles.orderDate}>{order.createdAt}</Text>
+              <Text style={styles.orderDate}>
+                {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+              </Text>
             </View>
 
             <View style={styles.statusRow}>

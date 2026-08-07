@@ -10,11 +10,14 @@ import { GradientButton } from '../../components/common/GradientButton';
 import { CircularScoreMeter } from '../../components/common/CircularScoreMeter';
 import { mobileApi, reportApi, formatDobForApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
 
 export default function MobileNumScreen() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [name, setName] = useState(user?.name || '');
-  const [dob, setDob] = useState(user?.dob || '29/10/2001');
+  const [dob, setDob] = useState(user?.dob || '');
   const [mobile, setMobile] = useState(user?.phone || '');
 
   React.useEffect(() => {
@@ -28,8 +31,12 @@ export default function MobileNumScreen() {
   const [result, setResult] = useState<any>(null);
 
   const handleConsultation = async () => {
-    if (!name || !dob || !mobile) {
-      alert('Please fill in Name, DOB, and Mobile Number');
+    if (!name.trim()) {
+      showToast({ type: 'error', title: '✨ Name Required', message: 'Please enter your full name.' });
+      return;
+    }
+    if (!mobile.trim() || mobile.trim().length < 10) {
+      showToast({ type: 'error', title: '📱 Mobile Number Needed', message: 'Please enter a valid 10-digit mobile phone number.' });
       return;
     }
 
@@ -162,13 +169,15 @@ export default function MobileNumScreen() {
           placeholderTextColor={ASBColors.textMuted}
         />
 
-        <Text style={styles.inputLabel}>DATE OF BIRTH (DD/MM/YYYY)</Text>
+        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY)</Text>
         <TextInput
           style={styles.textInput}
-          placeholder="29/10/2001"
+          placeholder="e.g. 15-08-1995"
           value={dob}
-          onChangeText={setDob}
+          onChangeText={(text) => setDob(formatDobInput(text))}
           placeholderTextColor={ASBColors.textMuted}
+          keyboardType="number-pad"
+          maxLength={10}
         />
 
         <Text style={styles.inputLabel}>MOBILE PHONE NUMBER (10 DIGITS)</Text>

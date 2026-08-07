@@ -9,10 +9,12 @@ import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
-export default function RegisterModal() {
+export default function RegisterScreen() {
   const router = useRouter();
   const { registerPassword } = useAuth();
+  const { showToast } = useToast();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -23,10 +25,9 @@ export default function RegisterModal() {
   const [loading, setLoading] = useState(false);
 
   const getStrength = () => {
-    if (!password) return { label: '', color: ASBColors.textMuted, width: '0%' };
-    if (password.length < 6) return { label: 'Weak', color: ASBColors.errorRed, width: '25%' };
-    if (password.length < 10) return { label: 'Medium', color: '#F59E0B', width: '50%' };
-    if (/[A-Z]/.test(password) && /[0-9]/.test(password) && /[!@#$%]/.test(password))
+    if (password.length === 0) return { label: '', color: 'transparent', width: '0%' };
+    if (password.length < 6) return { label: 'Weak', color: '#EF4444', width: '30%' };
+    if (password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password))
       return { label: 'Strong', color: ASBColors.goodGreen, width: '100%' };
     return { label: 'Good', color: '#10B981', width: '75%' };
   };
@@ -35,24 +36,25 @@ export default function RegisterModal() {
 
   const handleRegister = async () => {
     if (!name || !email || !phone || !password) {
-      alert('Please fill all required fields');
+      showToast({ type: 'error', title: '✨ Account Details Needed', message: 'Please fill in your name, email, phone, and password to create your account.' });
       return;
     }
     if (password !== confirmPwd) {
-      alert('Passwords do not match');
+      showToast({ type: 'error', title: '🌸 Password Re-Entry', message: 'Passwords do not match. Please re-enter your password carefully.' });
       return;
     }
     if (!termsAccepted) {
-      alert('Please accept Terms & Privacy Policy');
+      showToast({ type: 'error', title: '📜 Terms & Privacy Note', message: 'Please accept our Terms of Service & Privacy Policy to join the ASB community.' });
       return;
     }
 
     setLoading(true);
     try {
       await registerPassword({ name, email, phone, password });
+      showToast({ type: 'success', title: '✨ Account Created!', message: 'Welcome to the ASB Numerology Cosmic Community.' });
       router.replace('/(auth)/complete-profile');
     } catch (e: any) {
-      alert(e.message || 'Registration failed');
+      showToast({ type: 'error', title: '🔮 Registration Guidance', message: e.message || 'Could not register account. Please check your network and try again.' });
     } finally {
       setLoading(false);
     }
@@ -103,14 +105,21 @@ export default function RegisterModal() {
         <TextInput style={styles.input} value={confirmPwd} onChangeText={setConfirmPwd} secureTextEntry placeholder="Re-enter password" placeholderTextColor={ASBColors.textMuted} />
 
         {/* Terms Checkbox */}
-        <TouchableOpacity style={styles.termsRow} onPress={() => setTermsAccepted(!termsAccepted)}>
-          <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+        <View style={styles.termsRow}>
+          <TouchableOpacity onPress={() => setTermsAccepted(!termsAccepted)} style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
             {termsAccepted && <CheckCircle size={14} color="#FFFFFF" />}
-          </View>
+          </TouchableOpacity>
           <Text style={styles.termsText}>
-            I agree to the <Text style={styles.link}>Terms of Service</Text> & <Text style={styles.link}>Privacy Policy</Text>
+            I agree to the{' '}
+            <Text style={styles.link} onPress={() => router.push('/info/terms' as any)}>
+              Terms of Service
+            </Text>{' '}
+            &{' '}
+            <Text style={styles.link} onPress={() => router.push('/info/privacy' as any)}>
+              Privacy Policy
+            </Text>
           </Text>
-        </TouchableOpacity>
+        </View>
 
         <GradientButton
           title="Create Account"

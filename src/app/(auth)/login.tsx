@@ -9,10 +9,12 @@ import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 export default function LoginModal() {
   const router = useRouter();
   const { loginPassword, sendOtp, verifyOtp } = useAuth();
+  const { showToast } = useToast();
 
   const [mode, setMode] = useState<'PASSWORD' | 'OTP'>('PASSWORD');
   const [identifier, setIdentifier] = useState('');
@@ -23,7 +25,7 @@ export default function LoginModal() {
 
   const handleLogin = async () => {
     if (!identifier) {
-      alert('Please enter your email or phone number');
+      showToast({ type: 'error', title: '✨ Sign-In Details Needed', message: 'Please enter your registered email address or phone number to proceed.' });
       return;
     }
 
@@ -31,19 +33,25 @@ export default function LoginModal() {
     try {
       if (mode === 'PASSWORD') {
         await loginPassword(identifier, password);
+        showToast({ type: 'success', title: '✨ Welcome Back to ASB!', message: 'Connecting you to your personal cosmic dashboard...' });
         router.back();
       } else {
         if (!otpSent) {
           await sendOtp(identifier);
           setOtpSent(true);
-          alert('OTP sent to your phone/email!');
+          showToast({ type: 'info', title: '🔮 Verification Code Sent', message: 'Please check your phone for the 6-digit OTP code.' });
         } else {
           await verifyOtp(identifier, otp);
+          showToast({ type: 'success', title: '✨ Welcome Back to ASB!', message: 'OTP verified! Connecting you to your cosmic dashboard...' });
           router.back();
         }
       }
     } catch (e: any) {
-      alert(e.message || 'Login failed');
+      showToast({
+        type: 'error',
+        title: '🔮 Account Sign-In Note',
+        message: 'We could not verify these details. Please double-check your password or sign in using SMS OTP.',
+      });
     } finally {
       setLoading(false);
     }

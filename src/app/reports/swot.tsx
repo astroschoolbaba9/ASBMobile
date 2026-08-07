@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, ShieldCheck, AlertCircle, TrendingUp, AlertTriangle } from 'lucide-react-native';
 import { ASBColors, ASBFonts } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
+import { DobRequiredGate } from '../../components/common/DobRequiredGate';
 import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
@@ -15,7 +16,7 @@ export default function SwotAnalysisScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const effectiveDob = user?.dob || '29/10/2001';
+  const effectiveDob = user?.dob || '';
   const effectiveName = user?.name || 'Seeker';
   const profile = calculateNumerologyProfile(effectiveDob, effectiveName);
 
@@ -23,6 +24,7 @@ export default function SwotAnalysisScreen() {
   const [backendSwot, setBackendSwot] = useState<any>(null);
 
   useEffect(() => {
+    if (!effectiveDob) return;
     let isMounted = true;
     const fetchSwotReport = async () => {
       setLoading(true);
@@ -53,15 +55,15 @@ export default function SwotAnalysisScreen() {
 
     const s = [
       ...(pairCombined?.strengths || []),
-      `Soul Number ${profile.moolank}: Natural leadership and intuitive strategic clarity.`,
-      `Life Path ${profile.bhagyank}: High adaptability in financial and corporate environments.`,
-      `Present Lo Shu Digits (${profile.presentDigits.join(', ')}): Strong vibrational foundation for execution.`,
+      `Soul Number ${profile?.moolank}: Natural leadership and intuitive strategic clarity.`,
+      `Life Path ${profile?.bhagyank}: High adaptability in financial and corporate environments.`,
+      `Present Lo Shu Digits (${profile?.presentDigits?.join(', ')}): Strong vibrational foundation for execution.`,
     ];
 
     const w = [
       ...(pairCombined?.weakness || []),
-      `Missing Lo Shu Digits (${profile.missingDigits.join(', ')}): Potential gaps in daily routine discipline.`,
-      `Personal Year #${profile.personalYear}: Guard against impatience during transition phases.`,
+      `Missing Lo Shu Digits (${profile?.missingDigits?.join(', ')}): Potential gaps in daily routine discipline.`,
+      `Personal Year #${profile?.personalYear}: Guard against impatience during transition phases.`,
     ];
 
     const o = [
@@ -82,6 +84,7 @@ export default function SwotAnalysisScreen() {
   const swot = getDynamicSwot();
 
   return (
+    <DobRequiredGate reportTitle="Personal SWOT Analysis">
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.navRow}>
@@ -147,6 +150,7 @@ export default function SwotAnalysisScreen() {
         ))}
       </GlassCard>
     </ScrollView>
+    </DobRequiredGate>
   );
 }
 

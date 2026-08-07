@@ -11,11 +11,13 @@ import { GradientButton } from '../../../components/common/GradientButton';
 import { useQuery } from '@tanstack/react-query';
 import { crystalApi, getImageUrl } from '../../../api/client';
 import { useCart } from '../../../context/CartContext';
+import { useToast } from '../../../context/ToastContext';
 
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const [qty, setQty] = useState(1);
   const [isGift, setIsGift] = useState(false);
@@ -101,13 +103,13 @@ export default function ProductDetailScreen() {
 
         <View style={styles.ratingRow}>
           <Star size={16} color="#F59E0B" fill="#F59E0B" />
-          <Text style={styles.ratingVal}>{product.ratingAvg || 4.8}</Text>
-          <Text style={styles.ratingCount}>({product.ratingCount || 124} reviews)</Text>
+          <Text style={styles.ratingVal}>{product.ratingAvg ? product.ratingAvg : 'New'}</Text>
+          {product.ratingCount ? <Text style={styles.ratingCount}>({product.ratingCount} reviews)</Text> : null}
         </View>
 
         <View style={styles.priceRow}>
           <Text style={styles.priceVal}>₹{product.price}</Text>
-          <Text style={styles.mrpVal}>₹{product.mrp}</Text>
+          {mrp > price && <Text style={styles.mrpVal}>₹{product.mrp}</Text>}
         </View>
 
         <Text style={styles.descText}>{product.description}</Text>
@@ -119,7 +121,7 @@ export default function ProductDetailScreen() {
           <ShieldCheck size={18} color={ASBColors.royalViolet} />
           <Text style={styles.sectionTitle}>Spiritual Use & Benefits</Text>
         </View>
-        <Text style={styles.cardText}>{product.spiritualUse}</Text>
+        <Text style={styles.cardText}>{product.spiritualUse || 'Energised according to Vedic rituals to maximize high positive vibration.'}</Text>
       </GlassCard>
 
       {/* Gift Customization Options */}
@@ -178,9 +180,19 @@ export default function ProductDetailScreen() {
           variant="crystal"
           icon={<ShoppingBag size={18} color="#FFF" />}
           onPress={async () => {
-            await addToCart(product, qty);
-            alert('Item added to Cart!');
-            router.push('/shop/cart' as any);
+            await addToCart(product, qty, {
+              isGift,
+              giftWrap,
+              recipientName: recipientName.trim(),
+              giftMessage: giftMessage.trim(),
+            });
+            showToast({
+              type: 'success',
+              title: 'Added to Cart',
+              message: `${product.title || product.name || 'Item'} added to your cart!`,
+              actionLabel: 'VIEW CART',
+              onAction: () => router.push('/shop/cart' as any),
+            });
           }}
           style={{ flex: 1 }}
         />
@@ -199,6 +211,9 @@ const styles = StyleSheet.create({
     paddingTop: 54,
     paddingBottom: 40,
     gap: 14,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   navRow: {
     flexDirection: 'row',

@@ -15,14 +15,19 @@ export interface CartItem {
   mrp: number;
   qty: number;
   image: string;
+  isGift?: boolean;
+  giftWrap?: boolean;
+  recipientName?: string;
+  giftMessage?: string;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
   cartCount: number;
   subtotal: number;
+  grandTotal: number;
   loading: boolean;
-  addToCart: (product: any, quantity?: number) => Promise<void>;
+  addToCart: (product: any, quantity?: number, giftOptions?: { isGift?: boolean; giftWrap?: boolean; recipientName?: string; giftMessage?: string }) => Promise<void>;
   updateQty: (productId: string, delta: number) => Promise<void>;
   removeFromCart: (productId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -112,7 +117,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refetchCart();
   }, [refetchCart]);
 
-  const addToCart = async (product: any, quantity: number = 1) => {
+  const addToCart = async (
+    product: any,
+    quantity: number = 1,
+    giftOptions?: { isGift?: boolean; giftWrap?: boolean; recipientName?: string; giftMessage?: string }
+  ) => {
     const prodId = product._id || product.id || product.productId;
     const title = product.title || product.name || 'Spiritual Remedy';
     const price = product.price || 999;
@@ -121,7 +130,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isAuthenticated) {
       try {
-        await crystalApi.post('/api/cart/items', { productId: prodId, quantity });
+        await crystalApi.post('/api/cart/items', { productId: prodId, quantity, ...giftOptions });
         await fetchServerCart();
         return;
       } catch (e) {
@@ -135,10 +144,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let updated: CartItem[];
       if (existingIdx > -1) {
         updated = prev.map((item, idx) =>
-          idx === existingIdx ? { ...item, qty: item.qty + quantity } : item
+          idx === existingIdx ? { ...item, qty: item.qty + quantity, ...giftOptions } : item
         );
       } else {
-        updated = [...prev, { id: prodId, productId: prodId, title, price, mrp, qty: quantity, image }];
+        updated = [...prev, { id: prodId, productId: prodId, title, price, mrp, qty: quantity, image, ...giftOptions }];
       }
       setGuestCartStorage(updated);
       return updated;
@@ -204,6 +213,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const cartCount = cartItems.reduce((sum, item) => sum + (item.qty || 1), 0);
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
+  const shipping = subtotal > 999 || subtotal === 0 ? 0 : 99;
+  const grandTotal = Math.max(0, subtotal + shipping);
 
   return (
     <CartContext.Provider
@@ -211,6 +222,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cartItems,
         cartCount,
         subtotal,
+        grandTotal,
         loading,
         addToCart,
         updateQty,

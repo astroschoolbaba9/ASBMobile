@@ -2,41 +2,59 @@
 // User Profile & Account Settings Screen (Full Edit & Real Sync)
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, User, Mail, Phone, Calendar, CreditCard, Edit3, LogOut, Package, Gift, BookOpen, FileText, ShieldCheck, X, Check } from 'lucide-react-native';
 import { ASBColors, ASBFonts, ASBShadows } from '../theme/tokens';
 import { GlassCard } from '../components/common/GlassCard';
 import { GradientButton } from '../components/common/GradientButton';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { ConfirmModal } from '../components/common/ConfirmModal';
 import { useQuery } from '@tanstack/react-query';
 import { reportApi } from '../api/client';
+import { calculateNumerologyProfile } from '../utils/numerologyMath';
+import { formatDobInput, isValidDob } from '../utils/dobFormatter';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, isAuthenticated, updateProfile } = useAuth();
+  const { showToast } = useToast();
   
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
-  const [editDob, setEditDob] = useState(user?.dob || '29/10/2001');
+  const [editDob, setEditDob] = useState(user?.dob || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editGender, setEditGender] = useState(user?.gender || 'male');
   const [saving, setSaving] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Fetch profile bulletins
   const { data: bulletins } = useQuery({
     queryKey: ['profile-bulletins', user?.dob],
     queryFn: async () => {
-      const res = await reportApi.get('/api/numerology/profile-bulletins.json', {
-        params: { dob: user?.dob },
-      });
-      return res.data;
+      if (!user?.dob) return [];
+      try {
+        const res = await reportApi.get('/api/numerology/profile-bulletins.json', { params: { dob: user.dob } });
+        return res.data?.bulletins || [];
+      } catch (e) {
+        return [];
+      }
     },
     enabled: !!user?.dob,
   });
 
   const handleSaveProfile = async () => {
+    if (editDob && !isValidDob(editDob)) {
+      showToast({
+        type: 'error',
+        title: '🔮 Birth Date Guidance',
+        message: 'Please enter a valid Date of Birth in DD/MM/YYYY format (e.g. 29/10/2001).',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       await updateProfile({
@@ -47,26 +65,19 @@ export default function ProfileScreen() {
         gender: editGender,
       });
       setEditing(false);
-      Alert.alert('Profile Updated', 'Your profile details have been successfully saved.');
+      showToast({ type: 'success', title: 'Profile Saved', message: 'Your account details have been updated.' });
     } catch (e) {
-      Alert.alert('Save Failed', 'Could not update profile. Please try again.');
+      showToast({ type: 'error', title: 'Save Failed', message: 'Could not update profile details. Please try again.' });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(tabs)');
-        },
-      },
-    ]);
+  const handleConfirmLogout = async () => {
+    setShowLogoutModal(false);
+    await logout();
+    showToast({ type: 'info', title: 'Logged Out', message: 'You have been signed out of your account.' });
+    router.replace('/(tabs)');
   };
 
   if (!isAuthenticated) {
@@ -111,7 +122,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             onPress={() => {
               setEditName(user?.name || '');
-              setEditDob(user?.dob || '29/10/2001');
+              setEditDob(user?.dob || '');
               setEditEmail(user?.email || '');
               setEditPhone(user?.phone || '');
               setEditGender(user?.gender || 'male');
@@ -167,27 +178,32 @@ export default function ProfileScreen() {
       </GlassCard>
 
       {/* Cosmic Personality Traits */}
-      <GlassCard style={styles.card}>
-        <Text style={styles.sectionTitle}>COSMIC PERSONALITY TRAITS</Text>
-        <View style={styles.bulletinGrid}>
-          <View style={styles.bulletinItem}>
-            <Text style={styles.bLabel}>Lucky Number</Text>
-            <Text style={styles.bValue}>{bulletins?.lucky_number || '7'}</Text>
-          </View>
-          <View style={styles.bulletinItem}>
-            <Text style={styles.bLabel}>Lucky Color</Text>
-            <Text style={styles.bValue}>{bulletins?.lucky_color || 'Royal Purple'}</Text>
-          </View>
-          <View style={styles.bulletinItem}>
-            <Text style={styles.bLabel}>Lucky Day</Text>
-            <Text style={styles.bValue}>{bulletins?.lucky_day || 'Sunday'}</Text>
-          </View>
-          <View style={styles.bulletinItem}>
-            <Text style={styles.bLabel}>Element</Text>
-            <Text style={styles.bValue}>{bulletins?.element || 'Earth'}</Text>
-          </View>
-        </View>
-      </GlassCard>
+      {(() => {
+        const dynamicProf = user?.dob ? calculateNumerologyProfile(user.dob, user.name || '') : null;
+        return (
+          <GlassCard style={styles.card}>
+            <Text style={styles.sectionTitle}>COSMIC PERSONALITY TRAITS</Text>
+            <View style={styles.bulletinGrid}>
+              <View style={styles.bulletinItem}>
+                <Text style={styles.bLabel}>Lucky Number</Text>
+                <Text style={styles.bValue}>{bulletins?.lucky_number || dynamicProf?.moolank || '7'}</Text>
+              </View>
+              <View style={styles.bulletinItem}>
+                <Text style={styles.bLabel}>Destiny Number</Text>
+                <Text style={styles.bValue}>{bulletins?.destiny_number || dynamicProf?.bhagyank || '5'}</Text>
+              </View>
+              <View style={styles.bulletinItem}>
+                <Text style={styles.bLabel}>Personal Year</Text>
+                <Text style={styles.bValue}>{bulletins?.personal_year || dynamicProf?.personalYear || '1'}</Text>
+              </View>
+              <View style={styles.bulletinItem}>
+                <Text style={styles.bLabel}>Alignment</Text>
+                <Text style={styles.bValue}>{bulletins?.alignment || `${dynamicProf?.scores?.alignmentPercentage || 92}%`}</Text>
+              </View>
+            </View>
+          </GlassCard>
+        );
+      })()}
 
       {/* Quick Navigation Links */}
       <GlassCard style={styles.card}>
@@ -195,7 +211,7 @@ export default function ProfileScreen() {
         {[
           { label: 'My Orders', icon: <Package size={18} color={ASBColors.royalViolet} />, route: '/shop/orders' },
           { label: 'Gift Orders', icon: <Gift size={18} color={ASBColors.crimsonMagenta} />, route: '/shop/gift-orders' },
-          { label: 'My Courses', icon: <BookOpen size={18} color={ASBColors.primaryPurple} />, route: '/shop/courses' },
+          { label: 'My Courses', icon: <BookOpen size={18} color={ASBColors.primaryPurple} />, route: '/shop/my-courses' },
           { label: 'Saved Addresses', icon: <FileText size={18} color={ASBColors.sacredGold} />, route: '/shop/addresses' },
         ].map((item) => (
           <TouchableOpacity key={item.label} style={styles.navItem} onPress={() => router.push(item.route as any)}>
@@ -206,7 +222,7 @@ export default function ProfileScreen() {
       </GlassCard>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutBtn} onPress={() => setShowLogoutModal(true)}>
         <LogOut size={18} color="#EF4444" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
@@ -230,7 +246,14 @@ export default function ProfileScreen() {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>DATE OF BIRTH (DD/MM/YYYY)</Text>
-                <TextInput style={styles.modalInput} value={editDob} onChangeText={setEditDob} placeholder="29/10/2001" />
+                <TextInput
+                  style={styles.modalInput}
+                  value={editDob}
+                  onChangeText={(text) => setEditDob(formatDobInput(text))}
+                  placeholder="DD/MM/YYYY (e.g. 15/08/1995)"
+                  keyboardType="number-pad"
+                  maxLength={10}
+                />
               </View>
 
               <View style={styles.inputGroup}>
@@ -271,6 +294,16 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={showLogoutModal}
+        title="Sign Out"
+        message="Are you sure you want to log out of your account?"
+        confirmText="Sign Out"
+        variant="danger"
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </ScrollView>
   );
 }

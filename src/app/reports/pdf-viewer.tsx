@@ -7,14 +7,17 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Download, Share2, FileText, CheckCircle, Lock, LogIn, ChevronLeft, ChevronRight, Eye, BookOpen, Sparkles, ShieldCheck } from 'lucide-react-native';
 import { ASBColors, ASBFonts, ASBShadows } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
+import { DobRequiredGate } from '../../components/common/DobRequiredGate';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
 
 export default function PdfViewerScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'view' | 'download'>('view');
   const [currentPage, setCurrentPage] = useState(1);
   const [downloading, setDownloading] = useState(false);
@@ -22,9 +25,9 @@ export default function PdfViewerScreen() {
   const [completed, setCompleted] = useState(false);
 
   const effectiveName = user?.name || 'Seeker';
-  const effectiveDob = user?.dob || '29/10/2001';
+  const effectiveDob = user?.dob || '';
 
-  // Calculate 100% real math profile for the document previewer
+  // Calculate math profile for document previewer
   const profile = calculateNumerologyProfile(effectiveDob, effectiveName);
 
   const totalPages = 10;
@@ -56,10 +59,20 @@ export default function PdfViewerScreen() {
 
       setProgress(100);
       setCompleted(true);
+      showToast({
+        type: 'success',
+        title: 'Master PDF Generated',
+        message: 'Your 100-Page dossier is ready for viewing & sharing.',
+      });
     } catch (e) {
       console.warn('PDF API endpoint fallback, generating local summary:', e);
       setProgress(100);
       setCompleted(true);
+      showToast({
+        type: 'info',
+        title: 'Report Summary Ready',
+        message: 'Interactive report chapters generated for viewing.',
+      });
     } finally {
       setDownloading(false);
     }
@@ -159,6 +172,7 @@ export default function PdfViewerScreen() {
   const pageData = getPageContent(currentPage);
 
   return (
+    <DobRequiredGate reportTitle="100-Page Master PDF Report">
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Navigation Header */}
       <View style={styles.navRow}>
@@ -370,6 +384,7 @@ export default function PdfViewerScreen() {
         </>
       )}
     </ScrollView>
+    </DobRequiredGate>
   );
 }
 

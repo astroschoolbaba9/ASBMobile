@@ -9,10 +9,31 @@ import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 export default function CartScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const { cartItems, updateQty, removeFromCart, subtotal } = useCart();
+  const { showToast } = useToast();
+
+  const handleCheckoutPress = () => {
+    if (!isAuthenticated) {
+      showToast({
+        type: 'info',
+        title: '🔐 Login Required to Checkout',
+        message: 'Please sign in to your account to proceed with your order & tracking.',
+      });
+      router.push('/(auth)/login' as any);
+      return;
+    }
+
+    router.push({
+      pathname: '/shop/checkout',
+      params: { promoCode: discount > 0 ? coupon.trim().toUpperCase() : '' },
+    } as any);
+  };
 
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
@@ -21,11 +42,29 @@ export default function CartScreen() {
   const grandTotal = Math.max(0, subtotal - discount + shipping);
 
   const handleApplyCoupon = () => {
-    if (coupon.toUpperCase() === 'ASB10') {
-      setDiscount(Math.round(subtotal * 0.1));
-      alert('Coupon ASB10 applied! 10% Discount saved.');
+    const code = coupon.trim().toUpperCase();
+    if (code === 'AKSHAYA25') {
+      const saved = Math.floor(subtotal * 0.25);
+      setDiscount(saved);
+      showToast({
+        type: 'success',
+        title: '✨ Sacred Offer Applied!',
+        message: `Saved ₹${saved} (25% Off) with code AKSHAYA25.`,
+      });
+    } else if (code === 'ASB10') {
+      const saved = Math.round(subtotal * 0.1);
+      setDiscount(saved);
+      showToast({
+        type: 'success',
+        title: '✨ Welcome Offer Applied!',
+        message: `Saved ₹${saved} (10% Off) with code ASB10.`,
+      });
     } else {
-      alert('Invalid coupon code. Try ASB10.');
+      showToast({
+        type: 'error',
+        title: 'Coupon Note',
+        message: 'Invalid promo code. Try using AKSHAYA25 for 25% off or ASB10 for 10% off.',
+      });
     }
   };
 
@@ -47,7 +86,7 @@ export default function CartScreen() {
           <GradientButton
             title="Explore Store"
             variant="crystal"
-            onPress={() => router.push('/marketplace')}
+            onPress={() => router.push('/(tabs)/marketplace' as any)}
             style={{ marginTop: 14 }}
           />
         </GlassCard>
@@ -123,7 +162,7 @@ export default function CartScreen() {
             <GradientButton
               title={`Proceed to Checkout (₹${grandTotal})`}
               variant="crystal"
-              onPress={() => router.push('/shop/checkout' as any)}
+              onPress={handleCheckoutPress}
               style={{ marginTop: 14 }}
             />
           </GlassCard>
@@ -143,6 +182,9 @@ const styles = StyleSheet.create({
     paddingTop: 54,
     paddingBottom: 40,
     gap: 14,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   navRow: {
     flexDirection: 'row',

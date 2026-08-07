@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, ShieldAlert, Coffee, Sun, Activity, CheckCircle, Calendar, Clock, Heart, Zap, Sparkles, FileText, ChevronRight } from 'lucide-react-native';
 import { ASBColors, ASBFonts, ASBShadows } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
+import { DobRequiredGate } from '../../components/common/DobRequiredGate';
 import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
@@ -23,14 +24,15 @@ function reduceSingleDigit(num: number): number {
 export default function HealthReportScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const effectiveDob = user?.dob || '29/10/2001';
-  const effectiveName = user?.name || 'Seeker';
+  const effectiveDob = user?.dob || '';
+  const effectiveName = user?.name || '';
   const [activeCycleTab, setActiveCycleTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
 
   const [loading, setLoading] = useState(false);
   const [apiHealthData, setApiHealthData] = useState<any>(null);
 
   useEffect(() => {
+    if (!effectiveDob) return;
     let isMounted = true;
     const fetchHealthData = async () => {
       setLoading(true);
@@ -56,7 +58,7 @@ export default function HealthReportScreen() {
   }, [effectiveDob, user?.gender]);
 
   // 100% Dynamic Math Profile derived from user's DOB & Lo Shu Grid
-  const profile = calculateNumerologyProfile(effectiveDob, effectiveName);
+  const profile = effectiveDob ? calculateNumerologyProfile(effectiveDob, effectiveName) : null;
 
   // Compute Current Date Numbers (Personal Day, Month, Year)
   const today = new Date();
@@ -111,6 +113,7 @@ export default function HealthReportScreen() {
   const dayDateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
+    <DobRequiredGate reportTitle="Health & Vitality Report">
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.navRow}>
@@ -275,7 +278,7 @@ export default function HealthReportScreen() {
         )}
 
         <View style={styles.organRow}>
-          {profile.healthVulnerabilities.map((v, idx) => {
+          {(profile?.healthVulnerabilities || []).map((v, idx) => {
             const isOptimal = v.riskLevel === 'Optimal Vitality';
             const bgColor = isOptimal ? ASBColors.goodGreenBg : '#FEE2E2';
             const textColor = isOptimal ? ASBColors.goodGreen : '#991B1B';
@@ -293,7 +296,7 @@ export default function HealthReportScreen() {
         </View>
 
         <Text style={styles.cardBody}>
-          Based on birth date <Text style={{ fontFamily: ASBFonts.bodyBold }}>{effectiveDob}</Text>, your Soul Number <Text style={{ fontFamily: ASBFonts.bodyBold }}>{profile.moolank}</Text> thrives on regular sleep cycles and mindful morning hydration.
+          Based on birth date <Text style={{ fontFamily: ASBFonts.bodyBold }}>{effectiveDob}</Text>, your Soul Number <Text style={{ fontFamily: ASBFonts.bodyBold }}>{profile?.moolank}</Text> thrives on regular sleep cycles and mindful morning hydration.
         </Text>
       </GlassCard>
 
@@ -304,8 +307,8 @@ export default function HealthReportScreen() {
           <Text style={styles.cardTitle}>Holistic Lifestyle Remedies</Text>
         </View>
         {[
-          `Consume warm herbal tea (Chamomile/Ginger) during Personal Month #${profile.personalMonth}`,
-          `Wear Royal Purple or White attire on high-energy days for Soul #${profile.moolank}`,
+          `Consume warm herbal tea (Chamomile/Ginger) during Personal Month #${profile?.personalMonth}`,
+          `Wear Royal Purple or White attire on high-energy days for Soul #${profile?.moolank}`,
           `Practice 15 minutes of Pranayama breathwork at sunrise to balance Lo Shu grid`,
         ].map((rem, idx) => (
           <View key={idx} style={styles.remRow}>
@@ -331,6 +334,7 @@ export default function HealthReportScreen() {
         <ChevronRight size={20} color={ASBColors.primaryPurple} />
       </TouchableOpacity>
     </ScrollView>
+    </DobRequiredGate>
   );
 }
 

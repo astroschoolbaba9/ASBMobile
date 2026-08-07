@@ -5,13 +5,17 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_ENDPOINTS } from './config';
 
+import { Platform } from 'react-native';
+
 const TOKEN_KEY = 'asb_access_token';
 
 export async function getStoredToken(): Promise<string | null> {
   try {
+    if (Platform.OS === 'web') {
+      return typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+    }
     return await SecureStore.getItemAsync(TOKEN_KEY);
   } catch (error) {
-    console.error('Failed to read token from SecureStore:', error);
     return null;
   }
 }
@@ -19,18 +23,26 @@ export async function getStoredToken(): Promise<string | null> {
 export async function saveStoredToken(token: string): Promise<void> {
   try {
     if (token) {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, token);
+      } else {
+        await SecureStore.setItemAsync(TOKEN_KEY, token);
+      }
     } else {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await removeStoredToken();
     }
   } catch (error) {
-    console.error('Failed to save token to SecureStore:', error);
+    console.error('Failed to save token:', error);
   }
 }
 
 export async function removeStoredToken(): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    }
   } catch (error) {
     console.error('Failed to remove token:', error);
   }
@@ -38,7 +50,7 @@ export async function removeStoredToken(): Promise<void> {
 
 // DOB Date Format Helper: Ensures DOB is passed as DD/MM/YYYY for Python Backends
 export function formatDobForApi(dob?: string): string {
-  if (!dob) return '29/10/2001';
+  if (!dob) return '';
   let clean = dob.replace(/-/g, '/').trim();
   const parts = clean.split('/');
   if (parts.length === 3 && parts[0].length === 4) {

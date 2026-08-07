@@ -157,11 +157,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const completeProfile = async (data: { name: string; dob: string; gender: string }) => {
-    const res = await crystalApi.post('/api/auth/complete-profile', data);
-    if (res.data?.success) {
-      await fetchMe();
+    setUser((prev) => (prev ? { ...prev, ...data } : { _id: 'guest', ...data }));
+    try {
+      const res = await crystalApi.post('/api/auth/complete-profile', data);
+      if (res.data?.success && res.data?.user) {
+        setUser(res.data.user);
+      }
+      return res.data;
+    } catch (e) {
+      console.warn('Failed to sync complete-profile with backend, updated locally:', e);
+      return { success: true };
     }
-    return res.data;
   };
 
   const updateDob = async (newDob: string) => {

@@ -11,11 +11,16 @@ import { GradientButton } from '../../../components/common/GradientButton';
 
 import { useQuery } from '@tanstack/react-query';
 import { crystalApi, getImageUrl } from '../../../api/client';
+import { useToast } from '../../../context/ToastContext';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function CourseDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [enrolled, setEnrolled] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
   const { data: courseData, isLoading } = useQuery({
     queryKey: ['course-detail', id],
@@ -54,15 +59,15 @@ export default function CourseDetailScreen() {
   }
 
   const course = {
-    _id: courseRaw._id,
-    title: courseRaw.title,
+    _id: courseRaw._id || id,
+    title: courseRaw.title || 'ASB Masterclass',
     instructor: courseRaw.instructor || 'ASB Senior Expert',
     duration: (courseRaw.lessons || []).reduce((acc: number, l: any) => acc + (l.durationSec || 0), 0) > 0
       ? `${Math.round((courseRaw.lessons || []).reduce((acc: number, l: any) => acc + (l.durationSec || 0), 0) / 60)} mins`
       : 'Self-Paced',
     price: courseRaw.price || 499,
     mrp: courseRaw.mrp || 999,
-    ratingAvg: courseRaw.ratingAvg || 4.9,
+    ratingAvg: courseRaw.ratingAvg ? courseRaw.ratingAvg : 'New',
     image: getImageUrl(courseRaw.thumbnail || courseRaw.image),
     description: courseRaw.description || 'Comprehensive Numerology & Crystal Energy Masterclass by ASB Experts.',
     lessons: (courseRaw.lessons || []).map((l: any) => ({
@@ -72,24 +77,100 @@ export default function CourseDetailScreen() {
     })),
   };
 
-  if (!course) {
-    return (
-      <View style={[styles.container, { padding: 20, paddingTop: 60, alignItems: 'center' }]}>
-        <View style={styles.navRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <ArrowLeft size={20} color={ASBColors.darkNavy} />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Course Details</Text>
-        </View>
-        <GlassCard style={{ padding: 24, marginTop: 40, alignItems: 'center', width: '100%' }}>
-          <BookOpen size={40} color={ASBColors.textMuted} />
-          <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy, marginTop: 12 }}>
-            {isLoading ? 'Loading Course...' : 'Course Not Found'}
-          </Text>
-        </GlassCard>
-      </View>
-    );
-  }
+  const handleEnroll = async () => {
+    if (!user?.email || !user?.phone) {
+      showToast({
+        type: 'error',
+        title: '👤 Profile Incomplete',
+        message: 'Please update your email and phone number in your profile before enrolling in courses.',
+      });
+      router.push('/(auth)/complete-profile' as any);
+      return;
+    }
+
+    setEnrolling(true);
+    try {
+      const res = await crystalApi.post('/api/payments/payu/initiate', {
+        purpose: 'COURSE_BUY',
+        courseId: course._id,
+        amount: course.price,
+        customer: {
+          firstname: user?.name || 'Seeker',
+          email: user?.email,
+          phone: user?.phone,
+        },
+      });
+
+      if (res.data?.success) {
+        if (res.data?.actionUrl && res.data?.fields) {
+          const fields = res.data.fields;
+          const actionUrl = res.data.actionUrl;
+          const formHtml = `
+            <html><body onload="document.forms[0].submit()">
+              <form method="POST" action="${actionUrl}">
+                ${Object.entries(fields).map(([k, v]) => `<input type="hidden" name="${k}" value="${String(v).replace(/"/g, '&quot;')}" />`).join('')}
+              </form>
+              <p style="text-align:center;font-family:sans-serif;color:#666;margin-top:40vh;">Connecting to PayU Secure Gateway...</p>
+            </body></html>
+          `;
+          router.push({
+            pathname: '/shop/payu-webview',
+            params: {
+              formHtml: encodeURIComponent(formHtml),
+              purpose: 'COURSE',
+              courseId: course._id,
+            },
+          } as any);
+          return;
+        } else if (res.data?.paymentUrl || res.data?.redirectUrl) {
+          const rawUrl = res.data.paymentUrl || res.data.redirectUrl;
+          router.push({
+            pathname: '/shop/payu-webview',
+            params: {
+              paymentUrl: encodeURIComponent(rawUrl),
+              purpose: 'COURSE',
+              courseId: course._id,
+            },
+          } as any);
+          return;
+        }
+      }
+
+      // If backend direct grants course access (e.g. for free course)
+      setEnrolled(true);
+      showToast({
+        type: 'success',
+        title: 'Course Unlocked',
+        message: `Enrolled in "${course.title}". Enjoy learning!`,
+      });
+    } catch (e: any) {
+      console.warn('Course payment error:', e);
+      const msg = e.response?.data?.message || 'Unable to process course enrollment right now. Please try again.';
+      showToast({
+        type: 'error',
+        title: '🙏 Connection Note',
+        message: msg,
+      });
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const handleLessonClick = (lesson: any) => {
+    if (lesson.free || enrolled) {
+      showToast({
+        type: 'info',
+        title: `Playing: ${lesson.title}`,
+        message: 'Lesson video player starting...',
+      });
+    } else {
+      showToast({
+        type: 'error',
+        title: 'Lesson Locked',
+        message: 'Please enroll in this course to unlock full lesson access.',
+      });
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -121,9 +202,10 @@ export default function CourseDetailScreen() {
 
         {!enrolled && (
           <GradientButton
-            title="Enroll & Start Learning (₹4,999)"
+            title={`Enroll & Start Learning (₹${course.price})`}
             variant="crystal"
-            onPress={() => setEnrolled(true)}
+            loading={enrolling}
+            onPress={handleEnroll}
             style={{ marginTop: 12 }}
           />
         )}
@@ -140,7 +222,7 @@ export default function CourseDetailScreen() {
       <GlassCard style={styles.card}>
         <Text style={styles.sectionTitle}>COURSE CURRICULUM</Text>
         {course.lessons.map((lesson: any, idx: number) => (
-          <TouchableOpacity key={idx} style={styles.lessonRow} activeOpacity={0.8}>
+          <TouchableOpacity key={idx} style={styles.lessonRow} activeOpacity={0.8} onPress={() => handleLessonClick(lesson)}>
             <View style={[styles.lessonIcon, (lesson.free || enrolled) ? styles.lessonUnlocked : styles.lessonLocked]}>
               {(lesson.free || enrolled) ? <Play size={14} color="#FFFFFF" /> : <Lock size={14} color={ASBColors.textMuted} />}
             </View>

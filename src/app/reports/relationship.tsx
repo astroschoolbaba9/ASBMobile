@@ -10,22 +10,34 @@ import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { reportApi, formatDobForApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { SocialShareCard } from '../../components/common/SocialShareCard';
 import { calculateRelationshipCompatibility } from '../../utils/numerologyMath';
+import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
 
 export default function RelationshipReportScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [partner1Name, setPartner1Name] = useState(user?.name || 'Partner 1');
-  const [partner1Dob, setPartner1Dob] = useState(user?.dob || '29/10/2001');
-  const [partner2Name, setPartner2Name] = useState('Partner 2');
-  const [partner2Dob, setPartner2Dob] = useState('15/05/1998');
+  const { showToast } = useToast();
+  const [partner1Name, setPartner1Name] = useState(user?.name || '');
+  const [partner1Dob, setPartner1Dob] = useState(user?.dob || '');
+  const [partner2Name, setPartner2Name] = useState('');
+  const [partner2Dob, setPartner2Dob] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const initialCalc = calculateRelationshipCompatibility(partner1Name, partner1Dob, partner2Name, partner2Dob);
+  const initialCalc = (partner1Dob && partner2Dob) ? calculateRelationshipCompatibility(partner1Name || 'Partner 1', partner1Dob, partner2Name || 'Partner 2', partner2Dob) : null;
   const [report, setReport] = useState<any>(initialCalc);
 
   const handleAnalyze = async () => {
+    if (!partner1Dob.trim() || !isValidDob(partner1Dob)) {
+      showToast({ type: 'error', title: '🔮 Partner 1 Birth Date Needed', message: 'Please enter a valid Date of Birth for Partner 1 in DD-MM-YYYY format.' });
+      return;
+    }
+    if (!partner2Dob.trim() || !isValidDob(partner2Dob)) {
+      showToast({ type: 'error', title: '🔮 Partner 2 Birth Date Needed', message: 'Please enter a valid Date of Birth for Partner 2 in DD-MM-YYYY format.' });
+      return;
+    }
+
     setLoading(true);
 
     const dob1Formatted = formatDobForApi(partner1Dob);
@@ -75,8 +87,8 @@ export default function RelationshipReportScreen() {
     }
   };
 
-  const emotionalHarmonyText = report?.emotional_harmony || initialCalc.emotional_harmony;
-  const marriageOutlookText = report?.marriage_outlook || initialCalc.marriage_outlook;
+  const emotionalHarmonyText = report?.emotional_harmony || initialCalc?.emotional_harmony || 'Enter details above to analyze emotional synergy.';
+  const marriageOutlookText = report?.marriage_outlook || initialCalc?.marriage_outlook || 'Enter details above to analyze long-term outlook.';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -103,8 +115,10 @@ export default function RelationshipReportScreen() {
           <TextInput
             style={styles.input}
             value={partner1Dob}
-            onChangeText={setPartner1Dob}
-            placeholder="DOB (DD/MM/YYYY)"
+            onChangeText={(text) => setPartner1Dob(formatDobInput(text))}
+            placeholder="DOB (DD-MM-YYYY)"
+            keyboardType="number-pad"
+            maxLength={10}
           />
         </View>
 
@@ -119,8 +133,10 @@ export default function RelationshipReportScreen() {
           <TextInput
             style={styles.input}
             value={partner2Dob}
-            onChangeText={setPartner2Dob}
-            placeholder="DOB (DD/MM/YYYY)"
+            onChangeText={(text) => setPartner2Dob(formatDobInput(text))}
+            placeholder="DOB (DD-MM-YYYY)"
+            keyboardType="number-pad"
+            maxLength={10}
           />
         </View>
 

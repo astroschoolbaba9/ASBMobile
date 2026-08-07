@@ -3,8 +3,32 @@
 
 import { useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const STREAK_KEY = 'asb_user_streak_data';
+
+async function getStreakStorage(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') {
+      return typeof window !== 'undefined' ? localStorage.getItem(STREAK_KEY) : null;
+    }
+    return await SecureStore.getItemAsync(STREAK_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+async function setStreakStorage(value: string): Promise<void> {
+  try {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') localStorage.setItem(STREAK_KEY, value);
+    } else {
+      await SecureStore.setItemAsync(STREAK_KEY, value);
+    }
+  } catch (e) {
+    console.warn('Failed to write streak storage:', e);
+  }
+}
 
 export interface StreakData {
   streakDays: number;
@@ -39,7 +63,7 @@ export function useStreak() {
 
   const loadStreak = async () => {
     try {
-      const stored = await SecureStore.getItemAsync(STREAK_KEY);
+      const stored = await getStreakStorage();
       const todayStr = new Date().toISOString().split('T')[0];
 
       if (stored) {
@@ -74,7 +98,7 @@ export function useStreak() {
             levelTitle,
           };
 
-          await SecureStore.setItemAsync(STREAK_KEY, JSON.stringify(updated));
+          await setStreakStorage(JSON.stringify(updated));
           setStreakData(updated);
         }
       } else {
@@ -86,7 +110,7 @@ export function useStreak() {
           level: 1,
           levelTitle: 'Cosmic Seeker',
         };
-        await SecureStore.setItemAsync(STREAK_KEY, JSON.stringify(initial));
+        await setStreakStorage(JSON.stringify(initial));
         setStreakData(initial);
       }
     } catch (e) {
@@ -109,7 +133,7 @@ export function useStreak() {
         levelTitle,
       };
 
-      await SecureStore.setItemAsync(STREAK_KEY, JSON.stringify(updated));
+      await setStreakStorage(JSON.stringify(updated));
       setStreakData(updated);
     } catch (e) {
       console.warn('Failed to update XP:', e);

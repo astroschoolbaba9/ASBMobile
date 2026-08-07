@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Briefcase, Award, TrendingUp, DollarSign, Star, CheckCircle } from 'lucide-react-native';
 import { ASBColors, ASBFonts } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
+import { DobRequiredGate } from '../../components/common/DobRequiredGate';
 import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
@@ -14,16 +15,17 @@ import { reportApi, formatDobForApi } from '../../api/client';
 export default function ProfessionReportScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const effectiveDob = user?.dob || '29/10/2001';
-  const effectiveName = user?.name || 'Seeker';
+  const effectiveDob = user?.dob || '';
+  const effectiveName = user?.name || '';
 
   const [loading, setLoading] = useState(false);
   const [apiData, setApiData] = useState<any>(null);
 
-  // 100% Real Dynamic Numerology Profile Math (Local Fallback & Base metrics)
-  const profile = calculateNumerologyProfile(effectiveDob, effectiveName);
+  // Real Numerology Profile Math — only runs when DOB is available
+  const profile = effectiveDob ? calculateNumerologyProfile(effectiveDob, effectiveName) : null;
 
   useEffect(() => {
+    if (!effectiveDob) return;
     let isMounted = true;
     const fetchProfessionReport = async () => {
       setLoading(true);
@@ -36,7 +38,7 @@ export default function ProfessionReportScreen() {
           setApiData(res.data.profession);
         }
       } catch (e) {
-        console.warn('Profession API fallback to local engine:', e);
+        console.warn('Profession API error:', e);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -48,88 +50,13 @@ export default function ProfessionReportScreen() {
     };
   }, [effectiveDob]);
 
-  // Industry recommendations derived dynamically from API or Moolank (Driver Number)
-  const getIndustryList = (moolank: number) => {
-    if (apiData?.professions && apiData.professions.length > 0) {
-      return apiData.professions;
-    }
-    switch (moolank) {
-      case 1:
-        return [
-          'Government & Public Administration',
-          'Executive Corporate Leadership',
-          'Tech Entrepreneurship',
-          'High-Level Strategy Consulting',
-        ];
-      case 2:
-        return [
-          'Psychology & Counseling',
-          'Diplomacy & Public Relations',
-          'Artistic Design & Media',
-          'Healthcare & Wellness Management',
-        ];
-      case 3:
-        return [
-          'Public Speaking & Media Publishing',
-          'Education & Academic Mentorship',
-          'Legal Advisory & Law',
-          'Creative Advertising',
-        ];
-      case 4:
-        return [
-          'Software Engineering & Architecture',
-          'Data Science & Analytics',
-          'Aviation & Logistics',
-          'Real Estate Development',
-        ];
-      case 5:
-        return [
-          'International Trade & E-Commerce',
-          'Financial Trading & Venture Capital',
-          'Marketing & Brand Strategy',
-          'Travel & Hospitality',
-        ];
-      case 6:
-        return [
-          'Luxury Goods & Fashion Design',
-          'Hospitality & Entertainment',
-          'Real Estate & Interior Architecture',
-          'Cosmetic Medicine',
-        ];
-      case 7:
-        return [
-          'Scientific Research & Innovation',
-          'Spiritual Science & Philosophy',
-          'Cybersecurity & Intelligence',
-          'Bio-Medical Research',
-        ];
-      case 8:
-        return [
-          'Heavy Industry & Manufacturing',
-          'Investment Banking & Finance',
-          'Judiciary & Corporate Law',
-          'Infrastructure Development',
-        ];
-      case 9:
-        return [
-          'Defense & Sports Management',
-          'Emergency Healthcare & Surgery',
-          'Real Estate Construction',
-          'Social Enterprise & NGOs',
-        ];
-      default:
-        return [
-          'Business Consulting & Finance',
-          'Information Technology',
-          'Media & Arts',
-          'Real Estate',
-        ];
-    }
-  };
-
-  const industries = getIndustryList(profile.moolank);
+  // Industry list from real API data only
+  const industries = apiData?.professions && apiData.professions.length > 0
+    ? apiData.professions
+    : [];
 
   return (
+    <DobRequiredGate reportTitle="Profession & Career Report">
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header Bar */}
       <View style={styles.navRow}>
@@ -154,19 +81,19 @@ export default function ProfessionReportScreen() {
       {/* Moolank & Bhagyank Rating Pair */}
       <View style={styles.pairRow}>
         <View style={styles.pairBox}>
-          <Text style={styles.pairVal}>{profile.moolank}</Text>
-          <Text style={styles.pairLabel}>SOUL #{profile.moolank}</Text>
+          <Text style={styles.pairVal}>{profile?.moolank}</Text>
+          <Text style={styles.pairLabel}>SOUL #{profile?.moolank}</Text>
         </View>
 
         <View style={styles.pairBox}>
-          <Text style={[styles.pairVal, { color: ASBColors.crimsonMagenta }]}>{profile.bhagyank}</Text>
-          <Text style={styles.pairLabel}>DESTINY #{profile.bhagyank}</Text>
+          <Text style={[styles.pairVal, { color: ASBColors.crimsonMagenta }]}>{profile?.bhagyank}</Text>
+          <Text style={styles.pairLabel}>DESTINY #{profile?.bhagyank}</Text>
         </View>
 
         <View style={styles.pairBox}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Star size={16} color="#F59E0B" />
-            <Text style={styles.pairVal}>{profile.scores.leadership}</Text>
+            <Text style={styles.pairVal}>{profile?.scores?.leadership}</Text>
           </View>
           <Text style={styles.pairLabel}>LEADERSHIP</Text>
         </View>
@@ -187,7 +114,7 @@ export default function ProfessionReportScreen() {
         </View>
 
         <Text style={styles.cardBody}>
-          {apiData?.rating_detail || apiData?.rating_text || `Soul Number ${profile.moolank} combined with Life Path ${profile.bhagyank} indicates high natural authority, financial acumen, and strategic vision. You thrive in positions with direct decision-making power.`}
+          {apiData?.rating_detail || apiData?.rating_text || `Soul Number ${profile?.moolank} combined with Life Path ${profile?.bhagyank} indicates high natural authority, financial acumen, and strategic vision.`}
         </Text>
       </GlassCard>
 
@@ -213,10 +140,11 @@ export default function ProfessionReportScreen() {
           <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>Peak Financial Accumulation Cycle</Text>
         </View>
         <Text style={[styles.cardBody, { color: 'rgba(255, 255, 255, 0.9)' }]}>
-          Your primary financial momentum activates during Personal Year #{profile.personalYear} cycles. Align key ventures and corporate negotiations during your high-vibration months.
+          Your primary financial momentum activates during Personal Year #{profile?.personalYear} cycles. Align key ventures and corporate negotiations during your high-vibration months.
         </Text>
       </GlassCard>
     </ScrollView>
+    </DobRequiredGate>
   );
 }
 

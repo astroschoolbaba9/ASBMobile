@@ -37,7 +37,7 @@ export default function CoursesScreen() {
       instructor: item.instructor || 'ASB Senior Expert',
       duration,
       lessonsCount,
-      ratingAvg: item.ratingAvg || 4.8,
+      ratingAvg: item.ratingAvg || null,
       image: getImageUrl(item.thumbnail || item.image),
     };
   });
@@ -85,7 +85,7 @@ export default function CoursesScreen() {
                     </View>
                     <View style={styles.metaChip}>
                       <Star size={12} color="#F59E0B" fill="#F59E0B" />
-                      <Text style={styles.metaText}>{course.ratingAvg || 4.9}</Text>
+                      <Text style={styles.metaText}>{course.ratingAvg ? course.ratingAvg : 'New'}</Text>
                     </View>
                   </View>
 

@@ -9,16 +9,22 @@ import { ASBColors, ASBShadows } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export default function AddressesScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const [addresses, setAddresses] = useState([
-    { _id: '1', label: 'Home', fullName: 'Bhaskar Joshi', line1: 'ASB Spiritual Center, Sector 62', city: 'Noida', state: 'Uttar Pradesh', pincode: '201301', phone: '9911500291', isDefault: true },
-    { _id: '2', label: 'Office', fullName: 'Bhaskar Joshi', line1: 'Coworking Hub, Block B', city: 'Gurugram', state: 'Haryana', pincode: '122001', phone: '9911500291', isDefault: false },
-  ]);
+  const [addresses, setAddresses] = useState<any[]>(
+    user?.addresses && user.addresses.length > 0
+      ? user.addresses
+      : []
+  );
 
   const [newLabel, setNewLabel] = useState('Home');
   const [newName, setNewName] = useState(user?.name || '');
@@ -28,37 +34,75 @@ export default function AddressesScreen() {
   const [newPincode, setNewPincode] = useState('');
   const [newPhone, setNewPhone] = useState(user?.phone || '');
 
-  const handleAddAddress = () => {
-    if (!newName || !newLine1 || !newCity || !newPincode) {
-      alert('Please fill all required fields');
-      return;
-    }
-    setAddresses((prev) => [
-      ...prev,
-      {
-        _id: Date.now().toString(),
-        label: newLabel,
-        fullName: newName,
-        line1: newLine1,
-        city: newCity,
-        state: newState,
-        pincode: newPincode,
-        phone: newPhone,
-        isDefault: prev.length === 0,
-      },
-    ]);
-    setShowForm(false);
+  const openFormForNew = () => {
+    setEditingId(null);
+    setNewLabel('Home');
+    setNewName(user?.name || '');
     setNewLine1('');
     setNewCity('');
     setNewState('');
     setNewPincode('');
+    setNewPhone(user?.phone || '');
+    setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete Address', 'Remove this saved address?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => setAddresses((prev) => prev.filter((a) => a._id !== id)) },
-    ]);
+  const openFormForEdit = (addr: any) => {
+    setEditingId(addr._id);
+    setNewLabel(addr.label || 'Home');
+    setNewName(addr.fullName || user?.name || '');
+    setNewLine1(addr.line1 || '');
+    setNewCity(addr.city || '');
+    setNewState(addr.state || '');
+    setNewPincode(addr.pincode || '');
+    setNewPhone(addr.phone || user?.phone || '');
+    setShowForm(true);
+  };
+
+  const handleSaveAddress = () => {
+    if (!newName || !newLine1 || !newCity || !newPincode) {
+      showToast({ type: 'error', title: 'Missing Information', message: 'Please fill in all required address fields.' });
+      return;
+    }
+
+    if (editingId) {
+      // Edit existing
+      setAddresses((prev) =>
+        prev.map((a) =>
+          a._id === editingId
+            ? { ...a, label: newLabel, fullName: newName, line1: newLine1, city: newCity, state: newState, pincode: newPincode, phone: newPhone }
+            : a
+        )
+      );
+      showToast({ type: 'success', title: 'Address Updated', message: 'Shipping address details updated successfully.' });
+    } else {
+      // Add new
+      setAddresses((prev) => [
+        ...prev,
+        {
+          _id: Date.now().toString(),
+          label: newLabel,
+          fullName: newName,
+          line1: newLine1,
+          city: newCity,
+          state: newState,
+          pincode: newPincode,
+          phone: newPhone,
+          isDefault: prev.length === 0,
+        },
+      ]);
+      showToast({ type: 'success', title: 'Address Saved', message: 'New shipping address added successfully.' });
+    }
+
+    setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteTargetId) {
+      setAddresses((prev) => prev.filter((a) => a._id !== deleteTargetId));
+      setDeleteTargetId(null);
+      showToast({ type: 'info', title: 'Address Removed', message: 'Address deleted from saved list.' });
+    }
   };
 
   return (
@@ -71,6 +115,16 @@ export default function AddressesScreen() {
       </View>
 
       {/* Address List */}
+      {addresses.length === 0 && !showForm && (
+        <GlassCard style={{ alignItems: 'center', paddingVertical: 32, gap: 8 }}>
+          <MapPin size={40} color={ASBColors.textMuted} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: ASBColors.darkNavy }}>No Saved Addresses</Text>
+          <Text style={{ fontSize: 12, color: ASBColors.textMuted, textAlign: 'center' }}>
+            Add your primary shipping address for quick checkout.
+          </Text>
+        </GlassCard>
+      )}
+
       <View style={{ gap: 12 }}>
         {addresses.map((addr) => (
           <GlassCard key={addr._id} style={styles.card}>
@@ -91,8 +145,14 @@ export default function AddressesScreen() {
             <Text style={styles.addrLine}>{addr.city}, {addr.state} - {addr.pincode}</Text>
             <Text style={styles.addrLine}>Phone: {addr.phone}</Text>
             <View style={styles.addrActions}>
-              <TouchableOpacity style={styles.actionBtn}><Edit3 size={14} color={ASBColors.primaryPurple} /><Text style={styles.actionText}>Edit</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(addr._id)}><Trash2 size={14} color={ASBColors.errorRed} /><Text style={[styles.actionText, { color: ASBColors.errorRed }]}>Delete</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => openFormForEdit(addr)}>
+                <Edit3 size={14} color={ASBColors.primaryPurple} />
+                <Text style={styles.actionText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => setDeleteTargetId(addr._id)}>
+                <Trash2 size={14} color={ASBColors.errorRed} />
+                <Text style={[styles.actionText, { color: ASBColors.errorRed }]}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </GlassCard>
         ))}
@@ -100,13 +160,13 @@ export default function AddressesScreen() {
 
       {/* Add New Address Button or Form */}
       {!showForm ? (
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)}>
+        <TouchableOpacity style={styles.addBtn} onPress={openFormForNew}>
           <Plus size={18} color={ASBColors.primaryPurple} />
           <Text style={styles.addBtnText}>Add New Address</Text>
         </TouchableOpacity>
       ) : (
         <GlassCard style={styles.card}>
-          <Text style={styles.formTitle}>NEW ADDRESS</Text>
+          <Text style={styles.formTitle}>{editingId ? 'EDIT ADDRESS' : 'NEW ADDRESS'}</Text>
 
           <Text style={styles.inputLabel}>LABEL</Text>
           <View style={styles.labelRow}>
@@ -135,11 +195,23 @@ export default function AddressesScreen() {
           <TextInput style={styles.input} value={newPhone} onChangeText={setNewPhone} keyboardType="phone-pad" placeholder="Phone" placeholderTextColor={ASBColors.textMuted} />
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowForm(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-            <GradientButton title="Save Address" variant="crystal" onPress={handleAddAddress} style={{ flex: 1 }} />
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowForm(false); setEditingId(null); }}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <GradientButton title={editingId ? 'Update Address' : 'Save Address'} variant="crystal" onPress={handleSaveAddress} style={{ flex: 1 }} />
           </View>
         </GlassCard>
       )}
+
+      <ConfirmModal
+        visible={!!deleteTargetId}
+        title="Delete Saved Address"
+        message="Are you sure you want to remove this address?"
+        confirmText="Delete"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
     </ScrollView>
   );
 }

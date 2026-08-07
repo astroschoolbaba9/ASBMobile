@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Sparkles, Sun, TrendingUp, Award, Zap, X, CheckCircle, Clock, ShieldAlert } from 'lucide-react-native';
 import { ASBColors, ASBFonts, ASBShadows } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
+import { DobRequiredGate } from '../../components/common/DobRequiredGate';
 import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
@@ -26,7 +27,7 @@ export default function TimeCyclesScreen() {
   const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const [selectedMonth, setSelectedMonth] = useState<any>(null);
 
-  const effectiveDob = user?.dob || '29/10/2001';
+  const effectiveDob = user?.dob || '';
   const effectiveName = user?.name || 'Seeker';
   const profile = calculateNumerologyProfile(effectiveDob, effectiveName);
 
@@ -35,6 +36,7 @@ export default function TimeCyclesScreen() {
   const [monthlyData, setMonthlyData] = useState<any>(null);
 
   useEffect(() => {
+    if (!effectiveDob) return;
     let isMounted = true;
     const fetchPredictions = async () => {
       setLoading(true);
@@ -99,6 +101,7 @@ export default function TimeCyclesScreen() {
   };
 
   return (
+    <DobRequiredGate reportTitle="Time Cycles & Predictions">
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.navRow}>
@@ -294,6 +297,7 @@ export default function TimeCyclesScreen() {
         </View>
       </Modal>
     </ScrollView>
+    </DobRequiredGate>
   );
 }
 

@@ -9,7 +9,9 @@ import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { nameApi, reportApi, formatDobForApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
+import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
 
 const PROFESSIONS = [
   'IT & Software',
@@ -38,8 +40,9 @@ const CHALDEAN_MAP: Record<string, number> = {
 
 export default function NameScreen() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [name, setName] = useState(user?.name || '');
-  const [dob, setDob] = useState(user?.dob || '29/10/2001');
+  const [dob, setDob] = useState(user?.dob || '');
 
   React.useEffect(() => {
     if (user?.name && !name) setName(user.name);
@@ -64,7 +67,7 @@ export default function NameScreen() {
 
   const handleAnalyze = async () => {
     if (!name.trim()) {
-      alert('Please enter your full name');
+      showToast({ type: 'error', title: '✨ Full Name Needed', message: 'Please enter your full name to analyze your Chaldean name spelling.' });
       return;
     }
     setLoading(true);
@@ -213,8 +216,10 @@ export default function NameScreen() {
           style={styles.textInput}
           placeholder="29-10-2001"
           value={dob}
-          onChangeText={setDob}
+          onChangeText={(text) => setDob(formatDobInput(text))}
           placeholderTextColor={ASBColors.textMuted}
+          keyboardType="number-pad"
+          maxLength={10}
         />
 
         <Text style={styles.inputLabel}>PROFESSION / INDUSTRY</Text>

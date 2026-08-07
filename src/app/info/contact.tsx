@@ -8,20 +8,37 @@ import { ArrowLeft, Phone, Mail, MessageCircle, MapPin, Send } from 'lucide-reac
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
+import { useToast } from '../../context/ToastContext';
+import { crystalApi } from '../../api/client';
 
 export default function ContactScreen() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!name || !message) {
-      alert('Please enter your name and message');
+      showToast({ type: 'error', title: 'Missing Message Details', message: 'Please enter your Name and Message content.' });
       return;
     }
-    setSent(true);
+    setLoading(true);
+
+    try {
+      await crystalApi.post('/api/contact', { name, email, message });
+    } catch (e) {
+      console.warn('Contact API fallback to mailto:', e);
+      const subject = encodeURIComponent(`Inquiry from ${name}`);
+      const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
+      Linking.openURL(`mailto:support@asbcrystal.in?subject=${subject}&body=${body}`);
+    } finally {
+      setLoading(false);
+      setSent(true);
+      showToast({ type: 'success', title: 'Message Sent', message: 'Thank you! Our support team will respond shortly.' });
+    }
   };
 
   return (

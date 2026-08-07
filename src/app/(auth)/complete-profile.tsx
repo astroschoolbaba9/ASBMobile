@@ -9,30 +9,61 @@ import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
   const { user, completeProfile } = useAuth();
+  const { showToast } = useToast();
 
   const [name, setName] = useState(user?.name || '');
   const [dob, setDob] = useState(user?.dob || '');
-  const [gender, setGender] = useState<string>(user?.gender || '');
+  const [gender, setGender] = useState('Male');
   const [loading, setLoading] = useState(false);
 
   const genderOptions = ['Male', 'Female', 'Other'];
 
+  const handleDobChange = (text: string) => {
+    const formatted = formatDobInput(text);
+    setDob(formatted);
+  };
+
   const handleSave = async () => {
-    if (!name || !dob || !gender) {
-      alert('All fields are required to generate your Cosmic Blueprint');
+    if (!name.trim()) {
+      showToast({
+        type: 'error',
+        title: '✨ Name Required',
+        message: 'Please enter your full name to personalize your numerology blueprint.',
+      });
+      return;
+    }
+
+    if (!dob.trim() || !isValidDob(dob)) {
+      showToast({
+        type: 'error',
+        title: '🔮 Birth Date Guidance',
+        message: 'Please enter a valid Date of Birth in DD-MM-YYYY format (e.g. 29-10-2001).',
+      });
       return;
     }
 
     setLoading(true);
     try {
-      await completeProfile({ name, dob, gender: gender.toLowerCase() });
+      await completeProfile({ name: name.trim(), dob: dob.trim(), gender: gender.toLowerCase() });
+      showToast({
+        type: 'success',
+        title: '✨ Cosmic Profile Unlocked!',
+        message: 'Welcome to your personalized ASB Numerology Dashboard.',
+      });
       router.replace('/(tabs)');
     } catch (e: any) {
-      alert(e.message || 'Failed to save profile');
+      showToast({
+        type: 'error',
+        title: '🔮 Profile Save Note',
+        message: e.message || 'Could not sync profile right now. Your details have been saved locally.',
+      });
+      router.replace('/(tabs)');
     } finally {
       setLoading(false);
     }
@@ -49,7 +80,7 @@ export default function CompleteProfileScreen() {
       </View>
 
       <GlassCard style={styles.card}>
-        <Text style={styles.inputLabel}>FULL NAME</Text>
+        <Text style={styles.inputLabel}>FULL NAME *</Text>
         <TextInput
           style={styles.input}
           value={name}
@@ -58,14 +89,24 @@ export default function CompleteProfileScreen() {
           placeholderTextColor={ASBColors.textMuted}
         />
 
-        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY)</Text>
+        {user?.phone ? (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={styles.inputLabel}>REGISTERED PHONE NUMBER</Text>
+            <View style={[styles.input, { backgroundColor: '#F3E8FF', justifyContent: 'center' }]}>
+              <Text style={{ fontSize: 14, color: ASBColors.darkNavy, fontWeight: '600' }}>{user.phone}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY) *</Text>
         <TextInput
           style={styles.input}
           value={dob}
-          onChangeText={setDob}
+          onChangeText={handleDobChange}
           placeholder="29-10-2001"
           placeholderTextColor={ASBColors.textMuted}
-          keyboardType="numbers-and-punctuation"
+          keyboardType="number-pad"
+          maxLength={10}
         />
         <Text style={styles.helperText}>Format: DD-MM-YYYY (e.g. 29-10-2001)</Text>
 

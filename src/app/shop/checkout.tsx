@@ -3,19 +3,24 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CreditCard, Truck, CheckCircle } from 'lucide-react-native';
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { crystalApi } from '../../api/client';
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { cartItems, grandTotal, clearCart } = useCart() as any;
+  const { promoCode: promoCodeParam } = useLocalSearchParams<{ promoCode?: string }>();
+  const { user, isAuthenticated } = useAuth();
+  const { cartItems, grandTotal, clearCart } = useCart();
+  const { showToast } = useToast();
+  const { addNotification } = useNotifications();
 
   const [fullName, setFullName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -27,49 +32,318 @@ export default function CheckoutScreen() {
   const [paymentMethod, setPaymentMethod] = useState<'PAYU' | 'COD'>('PAYU');
 
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
+  // Auth Gate check
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      showToast({
+        type: 'info',
+        title: '🔐 Login Required for Order',
+        message: 'Please sign in to your account to complete checkout and track your delivery.',
+      });
+      router.replace('/(auth)/login' as any);
+    }
+  }, [isAuthenticated]);
+
+  // Live Indian Postal PIN Lookup (Auto-fills City & State)
+  const lookupPincode = async (pin: string) => {
+    const clean = pin.trim().replace(/\D/g, '');
+    setPincode(clean);
+
+    if (clean.length === 6) {
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${clean}`);
+        const data = await res.json();
+        if (data?.[0]?.Status === 'Success' && data[0].PostOffice?.[0]) {
+          const po = data[0].PostOffice[0];
+          const detectedCity = po.District || po.Division || po.Block || '';
+          const detectedState = po.State || '';
+          if (detectedCity) setCity(detectedCity);
+          if (detectedState) setState(detectedState);
+
+          showToast({
+            type: 'success',
+            title: '📮 Pincode Verified',
+            message: `${detectedCity}, ${detectedState} (${clean}) verified.`,
+          });
+        }
+      } catch (e) {
+        console.warn('Pincode lookup fallback:', e);
+      }
+    }
+  };
+
+  // GPS Location Auto-fill (Amazon / Flipkart style)
+  const handleUseCurrentLocation = () => {
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      setLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const data = await res.json();
+            if (data?.address) {
+              const addr = data.address;
+              const extractedPin = addr.postcode ? addr.postcode.replace(/\s+/g, '') : '';
+              const extractedCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || '';
+              const extractedState = addr.state || '';
+              const extractedStreet = [addr.house_number, addr.building, addr.road, addr.suburb, addr.neighbourhood].filter(Boolean).join(', ');
+
+              if (extractedPin) setPincode(extractedPin);
+              if (extractedCity) setCity(extractedCity);
+              if (extractedState) setState(extractedState);
+              if (extractedStreet) setLine1(extractedStreet);
+
+              // If pin is available, perform pin verification
+              if (extractedPin && extractedPin.length === 6) {
+                await lookupPincode(extractedPin);
+              } else {
+                showToast({
+                  type: 'success',
+                  title: '📍 GPS Location Detected',
+                  message: `Auto-filled: ${extractedCity || 'City'}, ${extractedState || 'State'}.`,
+                });
+              }
+            }
+          } catch (e) {
+            showToast({
+              type: 'info',
+              title: '📍 Location Retrieved',
+              message: 'GPS coordinates retrieved. Please verify pincode & city.',
+            });
+          } finally {
+            setLocating(false);
+          }
+        },
+        (err) => {
+          setLocating(false);
+          showToast({
+            type: 'error',
+            title: '📍 Location Permission',
+            message: 'Unable to detect GPS position. Please enter your address manually.',
+          });
+        },
+        { enableHighAccuracy: true, timeout: 12000 }
+      );
+    } else {
+      showToast({
+        type: 'error',
+        title: '📍 GPS Unavailable',
+        message: 'GPS location is not supported on this browser. Please fill in details manually.',
+      });
+    }
+  };
+
   const handlePlaceOrder = async () => {
-    if (!fullName || !phone || !line1 || !pincode) {
-      alert('Please fill in required shipping fields');
+    // 1. Full Name Validation
+    if (!fullName || fullName.trim().length < 3) {
+      showToast({
+        type: 'error',
+        title: '👤 Full Name Required',
+        message: 'Please enter your complete full name (at least 3 characters).',
+      });
+      return;
+    }
+
+    // 2. Phone Number Validation (Indian 10-digit)
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      showToast({
+        type: 'error',
+        title: '📱 Invalid Mobile Number',
+        message: 'Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9.',
+      });
+      return;
+    }
+
+    // 3. Email Validation (Strict Format Check)
+    const cleanEmail = email.trim();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      showToast({
+        type: 'error',
+        title: '📧 Invalid Email Address',
+        message: 'Please enter a valid email address (e.g. name@example.com). Check for invalid symbols.',
+      });
+      return;
+    }
+
+    // 4. Street Address Line 1 Validation
+    if (!line1 || line1.trim().length < 5) {
+      showToast({
+        type: 'error',
+        title: '🏠 Delivery Address Needed',
+        message: 'Please enter a complete street address (House/Flat No, Building, Street).',
+      });
+      return;
+    }
+
+    // 5. City Validation
+    if (!city || city.trim().length < 2) {
+      showToast({
+        type: 'error',
+        title: '🏙️ City Required',
+        message: 'Please specify your city or district.',
+      });
+      return;
+    }
+
+    // 6. State Validation
+    if (!state || state.trim().length < 2) {
+      showToast({
+        type: 'error',
+        title: '🏛️ State Required',
+        message: 'Please enter your state (e.g. Delhi, Maharashtra, Uttarakhand).',
+      });
+      return;
+    }
+
+    // 7. Pincode Validation (6-digit Indian PIN)
+    const cleanPin = pincode.trim();
+    const pinRegex = /^\d{6}$/;
+    if (!pinRegex.test(cleanPin)) {
+      showToast({
+        type: 'error',
+        title: '📮 Invalid Pincode',
+        message: 'Please enter a valid 6-digit postal pincode.',
+      });
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      showToast({
+        type: 'error',
+        title: '🌸 Cart Note',
+        message: 'Your cart is empty. Please add spiritual remedies before checking out.',
+      });
       return;
     }
 
     setLoading(true);
 
     try {
-      // Create Order in MERN Backend for Admin Portal (/api/admin/orders)
-      await crystalApi.post('/api/orders/checkout', {
+      const orderItems = cartItems.map((item) => ({
+        productId: item.productId || item.id,
+        qty: item.qty || 1,
+        categoryName: '',
+        isGift: item.isGift || false,
+        giftWrap: item.giftWrap || false,
+        giftWrapPrice: 0,
+        giftOccasion: '',
+        giftMessage: item.giftMessage || '',
+        recipientName: item.recipientName || '',
+        recipientPhone: '',
+      }));
+
+      const checkoutPayload: any = {
+        items: orderItems,
+        promoCode: promoCodeParam || '',
         shippingAddress: {
-          fullName,
-          phone,
-          email,
-          line1,
-          city,
-          state,
-          pincode,
+          fullName: fullName.trim(),
+          phone: cleanPhone,
+          email: cleanEmail,
+          line1: line1.trim(),
+          line2: '',
+          city: city.trim(),
+          state: state.trim(),
+          pincode: cleanPin,
+          landmark: '',
         },
-        paymentMethod,
-        items: cartItems,
-      });
+        notes: '',
+      };
 
       if (paymentMethod === 'PAYU') {
-        const res = await crystalApi.post('/api/payments/payu/initiate', {
-          purpose: 'SHOP_ORDER',
-          customer: { firstname: fullName, email, phone },
-        });
-
-        if (res.data?.success && res.data?.fields) {
-          alert('PayU Payment Hash Generated! Redirecting to Gateway...');
-        }
+        checkoutPayload.payment = {
+          method: 'ONLINE_PENDING',
+          provider: 'PAYU',
+          transactionId: '',
+        };
       }
 
+      // 1. Create Order in MERN Backend
+      const orderRes = await crystalApi.post('/api/orders/checkout', checkoutPayload);
+      const createdOrderId = orderRes.data?.order?._id || orderRes.data?._id || orderRes.data?.id;
+
+      if (paymentMethod === 'PAYU') {
+        const payuRes = await crystalApi.post('/api/payments/payu/initiate', {
+          purpose: 'SHOP_ORDER',
+          orderId: createdOrderId,
+          amount: grandTotal,
+          customer: { firstname: fullName.trim(), email: cleanEmail, phone: cleanPhone },
+        });
+
+        if (payuRes.data?.success) {
+          if (payuRes.data?.actionUrl && payuRes.data?.fields) {
+            const fields = payuRes.data.fields;
+            const actionUrl = payuRes.data.actionUrl;
+            const formHtml = `
+              <html><body onload="document.forms[0].submit()">
+                <form method="POST" action="${actionUrl}">
+                  ${Object.entries(fields).map(([k, v]) => `<input type="hidden" name="${k}" value="${String(v).replace(/"/g, '&quot;')}" />`).join('')}
+                </form>
+                <p style="text-align:center;font-family:sans-serif;color:#666;margin-top:40vh;">Connecting to PayU Secure Gateway...</p>
+              </body></html>
+            `;
+            router.push({
+              pathname: '/shop/payu-webview',
+              params: {
+                formHtml: encodeURIComponent(formHtml),
+                purpose: 'SHOP_ORDER',
+                orderId: createdOrderId,
+              },
+            } as any);
+            return;
+          } else if (payuRes.data?.paymentUrl || payuRes.data?.redirectUrl) {
+            const rawUrl = payuRes.data.paymentUrl || payuRes.data.redirectUrl;
+            router.push({
+              pathname: '/shop/payu-webview',
+              params: {
+                paymentUrl: encodeURIComponent(rawUrl),
+                purpose: 'SHOP_ORDER',
+                orderId: createdOrderId,
+              },
+            } as any);
+            return;
+          }
+        }
+
+        showToast({
+          type: 'info',
+          title: '✨ Order Registered',
+          message: 'Your order has been registered. Proceeding to payment confirmation...',
+        });
+        await clearCart();
+        setOrderSuccess(true);
+        return;
+      }
+
+      // COD Payment Method
+      await addNotification({
+        title: '✨ Order Confirmed!',
+        message: `Your Cash on Delivery order #${createdOrderId || ''} of ₹${grandTotal} has been confirmed. Vedic energization will begin shortly!`,
+        type: 'order',
+        link: createdOrderId ? `/shop/order/${createdOrderId}` : '/shop/orders',
+      });
+
       await clearCart();
       setOrderSuccess(true);
+      showToast({
+        type: 'success',
+        title: '✨ Order Confirmed!',
+        message: `Order #${createdOrderId || 'ASB'} confirmed! Confirmation sent to ${cleanEmail}. Vedic energization begins shortly!`,
+      });
     } catch (e: any) {
-      console.warn('Checkout saved locally:', e);
-      await clearCart();
-      setOrderSuccess(true);
+      console.error('Checkout error:', e);
+      const backendMsg = e.response?.data?.message || e.response?.data?.error;
+      showToast({
+        type: 'error',
+        title: '🙏 Order Note',
+        message: backendMsg || 'We could not connect to the server right now. Your items are saved in your cart—please try again.',
+      });
     } finally {
       setLoading(false);
     }
@@ -90,12 +364,12 @@ export default function CheckoutScreen() {
           <CheckCircle size={48} color={ASBColors.goodGreen} />
           <Text style={styles.successTitle}>Order Placed Successfully!</Text>
           <Text style={styles.successSub}>
-            Your order confirmation has been sent to {email || phone}. Tracking details will be updated in My Orders.
+            Your order confirmation has been registered. Tracking details will be updated in My Orders.
           </Text>
           <GradientButton
             title="Return to Store"
             variant="crystal"
-            onPress={() => router.push('/marketplace')}
+            onPress={() => router.push('/(tabs)/marketplace' as any)}
             style={{ marginTop: 16 }}
           />
         </GlassCard>
@@ -103,30 +377,46 @@ export default function CheckoutScreen() {
         <View style={{ gap: 14 }}>
           {/* Shipping Address Form */}
           <GlassCard style={styles.card}>
-            <Text style={styles.sectionTitle}>SHIPPING ADDRESS</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>DELIVERY ADDRESS</Text>
+              <TouchableOpacity onPress={handleUseCurrentLocation} style={styles.gpsBtn} disabled={locating}>
+                <Text style={styles.gpsBtnText}>{locating ? 'Locating...' : '📍 Use GPS Location'}</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={styles.inputLabel}>FULL NAME *</Text>
-            <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Full Name" />
+            <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Full Name (e.g. Rahul Sharma)" />
 
-            <Text style={styles.inputLabel}>PHONE NUMBER *</Text>
-            <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Phone" />
+            <Text style={styles.inputLabel}>PHONE NUMBER * (10-Digit Mobile)</Text>
+            <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={10} placeholder="e.g. 9911500291" />
 
-            <Text style={styles.inputLabel}>EMAIL ADDRESS *</Text>
-            <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" placeholder="Email" />
+            <Text style={styles.inputLabel}>EMAIL ADDRESS * (For Order Invoice & Tracking)</Text>
+            <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="e.g. rahul@example.com" />
 
             <Text style={styles.inputLabel}>STREET ADDRESS (LINE 1) *</Text>
-            <TextInput style={styles.input} value={line1} onChangeText={setLine1} placeholder="House / Flat No, Street" />
+            <TextInput style={styles.input} value={line1} onChangeText={setLine1} placeholder="House / Flat No, Building, Street" />
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.inputLabel}>CITY *</Text>
-                <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" />
+                <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City / District" />
               </View>
+
               <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>PINCODE *</Text>
-                <TextInput style={styles.input} value={pincode} onChangeText={setPincode} keyboardType="number-pad" placeholder="Pincode" />
+                <Text style={styles.inputLabel}>STATE *</Text>
+                <TextInput style={styles.input} value={state} onChangeText={setState} placeholder="State" />
               </View>
             </View>
+
+            <Text style={styles.inputLabel}>PINCODE * (6-Digit Postal Code)</Text>
+            <TextInput
+              style={styles.input}
+              value={pincode}
+              onChangeText={(text) => lookupPincode(text)}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="e.g. 110001"
+            />
           </GlassCard>
 
           {/* Payment Method Selector */}
@@ -179,6 +469,9 @@ const styles = StyleSheet.create({
     paddingTop: 54,
     paddingBottom: 40,
     gap: 14,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   navRow: {
     flexDirection: 'row',
@@ -208,7 +501,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: ASBColors.darkNavy,
     letterSpacing: 1,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 10,
+  },
+  gpsBtn: {
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+  },
+  gpsBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: ASBColors.primaryPurple,
   },
   inputLabel: {
     fontSize: 10,

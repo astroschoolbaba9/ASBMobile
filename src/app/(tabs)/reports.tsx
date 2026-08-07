@@ -50,10 +50,11 @@ export default function ReportsScreen() {
     {
       id: 'swot',
       category: 'ALL',
-      title: 'Personal SWOT Matrix',
-      desc: 'Innate strengths, karmic weaknesses, growth opportunities, cautionary years.',
+      title: 'Mystical Triangle & Secret Chaldean Pairs',
+      desc: 'Inner Soul vibration, Chaldean pair strengths, secret karmic weakness & SWOT.',
       icon: <Shield size={22} color={ASBColors.primaryPurple} />,
       route: '/reports/swot',
+      badge: 'FEATURED',
     },
     {
       id: 'time-cycles',
@@ -104,13 +105,13 @@ export default function ReportsScreen() {
       <GlassCard style={{ marginBottom: 16, padding: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <CheckCircle size={16} color={ASBColors.goodGreen} />
+            <CheckCircle size={16} color={user?.dob ? ASBColors.goodGreen : ASBColors.textMuted} />
             <Text style={{ fontSize: 12, fontFamily: ASBFonts.bodyBold, color: ASBColors.darkNavy }}>
-              Profile Synced: {user?.name || 'Seeker'}
+              {user?.name ? `Profile Synced: ${user.name}` : 'Guest User'}
             </Text>
           </View>
           <Text style={{ fontSize: 11, fontFamily: ASBFonts.bodyMedium, color: ASBColors.primaryPurple }}>
-            DOB: {user?.dob || '29/10/2001'}
+            {user?.dob ? `DOB: ${user.dob}` : 'DOB: Not Set'}
           </Text>
         </View>
       </GlassCard>
@@ -173,7 +174,10 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingTop: 54,
-    paddingBottom: 40,
+    paddingBottom: 90,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
   },
   headerTitle: {
     fontSize: 20,
