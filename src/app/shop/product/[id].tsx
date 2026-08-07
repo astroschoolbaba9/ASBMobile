@@ -24,6 +24,8 @@ export default function ProductDetailScreen() {
   const [giftWrap, setGiftWrap] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
   const [recipientName, setRecipientName] = useState('');
+  const [selectedImgIndex, setSelectedImgIndex] = useState(0);
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
 
   const { data: productData, isLoading } = useQuery({
     queryKey: ['product-detail', id],
@@ -73,8 +75,6 @@ export default function ProductDetailScreen() {
   const price = product.price || 0;
   const mrp = product.mrp || price;
   const savings = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  const [selectedImgIndex, setSelectedImgIndex] = useState(0);
-  const [zoomModalOpen, setZoomModalOpen] = useState(false);
 
   const rawImages: string[] = Array.isArray(product.images) && product.images.length > 0
     ? product.images
