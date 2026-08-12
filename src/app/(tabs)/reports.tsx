@@ -9,8 +9,11 @@ import { ASBColors, ASBFonts, ASBShadows } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { useAuth } from '../../context/AuthContext';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function ReportsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState('ALL');
 
@@ -105,7 +108,7 @@ export default function ReportsScreen() {
       : reportsList.filter((item) => item.category === selectedFilter || item.category === 'ALL');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: Math.max(16, insets.top + 8) }]}>
       <Text style={styles.headerTitle}>COSMIC REPORTS CENTER</Text>
       <Text style={styles.headerSubtitle}>Select a report module to view deep numerical insights</Text>
 

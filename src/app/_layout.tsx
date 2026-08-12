@@ -33,6 +33,8 @@ const queryClient = new QueryClient({
 import { NotificationProvider } from '../context/NotificationContext';
 import { NotificationDrawer } from '../components/notification/NotificationDrawer';
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 export default function RootLayout() {
   const [showSplash, setShowSplash] = React.useState(true);
   const [fontsLoaded] = useFonts({
@@ -54,8 +56,9 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
         <AuthProvider>
           <NotificationProvider>
             <CartProvider>
@@ -109,6 +112,7 @@ export default function RootLayout() {
       </AuthProvider>
     </ToastProvider>
   </QueryClientProvider>
+</SafeAreaProvider>
   );
 }
 

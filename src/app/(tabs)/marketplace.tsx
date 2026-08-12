@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Search, ShoppingCart, Star, Sparkles, ShoppingBag, CheckCircle, X, Filter } from 'lucide-react-native';
+import { Search, ShoppingCart, Star, Sparkles, ShoppingBag, CheckCircle, X } from 'lucide-react-native';
 import { ASBColors, ASBFonts } from '../../theme/tokens';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useQuery } from '@tanstack/react-query';
@@ -12,9 +12,12 @@ import { crystalApi, getImageUrl } from '../../api/client';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function MarketplaceScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { cartCount, addToCart } = useCart();
 
   const [search, setSearch] = useState('');
@@ -108,7 +111,7 @@ export default function MarketplaceScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: Math.max(12, insets.top + 4) }]}>
       {/* Top Header & Search Bar */}
       <View style={styles.header}>
         <View style={styles.topRow}>
@@ -259,17 +262,21 @@ const styles = StyleSheet.create({
     backgroundColor: ASBColors.bgWarmIvory,
   },
   header: {
-    paddingTop: 50,
     paddingHorizontal: 16,
+    paddingBottom: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: ASBColors.borderIvory,
+    width: '100%',
+    maxWidth: 1000,
+    alignSelf: 'center',
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    width: '100%',
   },
   storeTitle: {
     fontSize: 18,

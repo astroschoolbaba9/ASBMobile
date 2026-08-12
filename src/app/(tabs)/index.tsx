@@ -39,12 +39,14 @@ import { formatDobInput, isValidDob, getLuckyColor } from '../../utils/dobFormat
 import { NotificationBell } from '../../components/notification/NotificationBell';
 import { useStreak } from '../../hooks/useStreak';
 import { useToast } from '../../context/ToastContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
   const { user, isAuthenticated, updateDob } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   // Habit Streak Hook
   const { streakDays, addXp } = useStreak();
@@ -96,7 +98,11 @@ export default function DashboardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: ASBColors.bgWarmIvory }}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(16, insets.top + 8), paddingBottom: Math.max(40, insets.bottom + 20) }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header Bar with ASB Logo (Top-Left 40x40), Streak & Profile */}
         <Animated.View entering={Platform.OS !== 'web' ? FadeInDown.duration(600) : undefined} style={styles.headerBar}>
           <View style={styles.brandRow}>
@@ -384,11 +390,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14,
+    width: '100%',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 1,
   },
   headerLogoImg: {
     width: 40,
@@ -410,7 +418,8 @@ const styles = StyleSheet.create({
   headerRightRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   streakBadge: {
     flexDirection: 'row',
