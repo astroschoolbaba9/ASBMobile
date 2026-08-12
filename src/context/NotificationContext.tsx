@@ -166,11 +166,22 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           const { status } = await ExpoNotifications.requestPermissionsAsync();
           if (status === 'granted' && typeof ExpoNotifications.getExpoPushTokenAsync === 'function') {
             try {
-              const projectId = ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId || '9f3c4fe8-95a0-4f4e-a359-29e558d02eb5';
+              const projectId =
+                ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId ||
+                ExpoConstants?.expoConfig?.extra?.eas?.projectId ||
+                'c36eca41-6b5d-431d-8339-f174e4e0c6d7';
               const tokenRes = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
               if (tokenRes?.data) {
                 setPushToken(tokenRes.data);
-                console.log('📱 EXPO PUSH TOKEN:', tokenRes.data);
+                console.log('📱 EXPO PUSH TOKEN REGISTERED:', tokenRes.data);
+                try {
+                  await crystalApi.post('/api/auth/push-token', {
+                    pushToken: tokenRes.data,
+                    platform: Platform.OS,
+                  });
+                } catch (e) {
+                  console.warn('Failed to sync push token with backend:', e);
+                }
               }
             } catch (err) {}
           }
