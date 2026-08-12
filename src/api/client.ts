@@ -115,8 +115,12 @@ clients.forEach((client) => {
         const status = error.response.status;
         const serverMsg = error.response.data?.message || error.response.data?.error || error.response.data?.detail;
 
-        if (status === 401 || status === 403) {
+        if (status === 409) {
+          error.userFriendlyMessage = serverMsg || '📧 Account Exists: An account with this email address or phone number is already registered. Please log in instead.';
+        } else if (status === 401 || status === 403) {
           error.userFriendlyMessage = '🔐 Session Expired: Please log in again to continue.';
+        } else if (status === 400 || status === 422) {
+          error.userFriendlyMessage = serverMsg || '✨ Request Note: Please verify your input details and try again.';
         } else if (status === 404) {
           error.userFriendlyMessage = serverMsg || '🌸 Item Not Found: The requested information or product could not be located.';
         } else if (status >= 500) {

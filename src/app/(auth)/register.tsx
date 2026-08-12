@@ -54,7 +54,8 @@ export default function RegisterScreen() {
       showToast({ type: 'success', title: '✨ Account Created!', message: 'Welcome to the ASB Numerology Cosmic Community.' });
       router.replace('/(auth)/complete-profile');
     } catch (e: any) {
-      showToast({ type: 'error', title: '🔮 Registration Guidance', message: e.message || 'Could not register account. Please check your network and try again.' });
+      const msg = e.userFriendlyMessage || e.response?.data?.detail || e.response?.data?.message || e.message || 'Could not register account. Please check your network and try again.';
+      showToast({ type: 'error', title: '🔮 Registration Guidance', message: msg });
     } finally {
       setLoading(false);
     }

@@ -43,7 +43,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     if (typeof options === 'string') {
       opts = { message: options, type: 'info' };
     } else if (options && typeof options === 'object') {
-      const friendlyMsg = options.userFriendlyMessage || options.message || options.response?.data?.message || '✨ Connection Note: Please check details and try again.';
+      const rawMsg = options.message || '';
+      const isStatusCodeMsg = typeof rawMsg === 'string' && (rawMsg.includes('status code') || rawMsg.includes('Request failed'));
+      
+      const friendlyMsg = options.userFriendlyMessage || (!isStatusCodeMsg ? rawMsg : null) || options.response?.data?.detail || options.response?.data?.message || '📧 Note: Please verify your details and try again.';
+      
       opts = {
         title: options.title || (options.type === 'error' ? '✨ Note' : undefined),
         message: friendlyMsg,
