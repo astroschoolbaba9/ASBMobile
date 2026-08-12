@@ -38,8 +38,38 @@ const CHALDEAN_MAP: Record<string, number> = {
   F: 8, P: 8,
 };
 
+const CHALDEAN_COMPOUND_MEANINGS: Record<number, string> = {
+  10: 'The Wheel of Fortune — Honor, faith, and self-confidence.',
+  11: 'A Lion Muzzled — Hidden warnings, high intuition, spiritual trials.',
+  12: 'The Sacrifice — Educational lessons, introspection, deep knowledge.',
+  13: 'Transformation & Power — Shift in plans, sudden renewal.',
+  14: 'Movement & Business — Trade, travel, magnetic financial luck.',
+  15: 'The Magician of Venus — Eloquence, charm, luxury attraction.',
+  16: 'The Shattered Citadel — Unexpected warnings, spiritual awakening.',
+  17: 'The Star of the Magi — High spiritual luck, lasting fame.',
+  18: 'Material vs Spiritual Conflict — Strong courage, legal caution.',
+  19: 'The Prince of Heaven — Ultimate success, honor, happiness.',
+  20: 'The Awakening — Higher purpose, renewed ambition.',
+  21: 'The Crown of the Magi — Universal advancement, total victory.',
+  22: 'The Sacred Vision — High responsibility, master builder.',
+  23: 'The Royal Star of the Lion — Divine protection, professional success.',
+  24: 'Financial Growth & Protection — Help from high authority, wealth luck.',
+  25: 'Wisdom Through Experience — Creative analysis, technical success.',
+  26: 'Partnership Caution — Financial foresight required, long-term gain.',
+  27: 'The Scepter of Command — High intelligence, leadership, authority.',
+  28: 'Trusting Caution — Great potential requiring balanced judgment.',
+  29: 'Grace Under Trial — Strong intuition, perseverance required.',
+  30: 'Luminous Mind — Intellectual mastery, artistic success.',
+  31: 'Self-Reliant Thinker — Independent path, high focus.',
+  32: 'International Fame — Communication power, public applause.',
+  33: 'Spiritual Teacher — Universal love, public blessing.',
+  37: 'Royal Friendship — Good luck in partnerships and trade.',
+  42: 'Creative Abundance — Artistic fame and financial stability.',
+  51: 'High Military / Executive Power — Unstoppable ambition.',
+};
+
 export default function NameScreen() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { showToast } = useToast();
   const [name, setName] = useState(user?.name || '');
   const [dob, setDob] = useState(user?.dob || '');
@@ -48,6 +78,26 @@ export default function NameScreen() {
     if (user?.name && !name) setName(user.name);
     if (user?.dob) setDob(user.dob);
   }, [user]);
+
+  const handleApplySpelling = async (newName: string) => {
+    try {
+      if (updateProfile) {
+        await updateProfile({ name: newName });
+        setName(newName);
+        showToast({
+          type: 'success',
+          title: '✨ Profile Name Updated!',
+          message: `Your active profile name has been updated to "${newName}".`,
+        });
+      }
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: '✨ Spelling Previewed',
+        message: `Previewing spelling "${newName}" for your Chaldean calculations.`,
+      });
+    }
+  };
   const [profession, setProfession] = useState('Business & Entrepreneurship');
   const [showProfDropdown, setShowProfDropdown] = useState(false);
   const [showChaldeanMap, setShowChaldeanMap] = useState(false);
@@ -342,6 +392,17 @@ export default function NameScreen() {
             </Text>
           </GlassCard>
 
+          {/* Chaldean Compound Interpretation Card */}
+          {result.name_breakdown?.compound && CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound] && (
+            <GlassCard style={styles.meaningCard}>
+              <View style={styles.meaningHeaderRow}>
+                <Sparkles size={16} color={ASBColors.primaryPurple} />
+                <Text style={styles.meaningCardTitle}>CHALDEAN COMPOUND MEANING (#{result.name_breakdown.compound})</Text>
+              </View>
+              <Text style={styles.meaningText}>{CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound]}</Text>
+            </GlassCard>
+          )}
+
           {/* Priority Spelling Suggestions */}
           {recommendations.length > 0 && (
             <View style={{ marginTop: 12 }}>
@@ -359,6 +420,14 @@ export default function NameScreen() {
                     <Text style={{ fontWeight: '700' }}>{rec.root}</Text>
                   </Text>
                   <Text style={styles.recReason}>{rec.reason}</Text>
+
+                  <TouchableOpacity
+                    style={styles.applyBtn}
+                    onPress={() => handleApplySpelling(rec.name)}
+                  >
+                    <Sparkles size={12} color="#FFF" />
+                    <Text style={styles.applyBtnText}>Set as Active Profile Name</Text>
+                  </TouchableOpacity>
                 </GlassCard>
               ))}
             </View>
@@ -573,6 +642,45 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: ASBColors.primaryPurple,
     marginVertical: 4,
+  },
+  meaningCard: {
+    padding: 14,
+    backgroundColor: '#FAF5FF',
+    borderColor: ASBColors.borderPurple,
+  },
+  meaningHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  meaningCardTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: ASBColors.primaryPurple,
+    letterSpacing: 1,
+  },
+  meaningText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ASBColors.darkNavy,
+    lineHeight: 18,
+  },
+  applyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: ASBColors.primaryPurple,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  applyBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   targetText: {
     fontSize: 12,
