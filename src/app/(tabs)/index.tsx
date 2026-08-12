@@ -136,13 +136,10 @@ export default function DashboardScreen() {
         {!isAuthenticated ? (
           /* GUEST PREVIEW DASHBOARD */
           <>
-            <GlassCard variant="purple" style={styles.heroCard}>
-              <Text style={styles.heroSub}>SACRED BLUEPRINT ANALYSIS</Text>
-              <Text style={styles.heroTitle}>Discover Your Cosmic Destiny</Text>
-              <Text style={styles.guestSubtitle}>
-                Enter your name & DOB to calculate your dynamic Soul Purpose & Life Path numbers.
-              </Text>
-            </GlassCard>
+            <View style={styles.singleLineBanner}>
+              <Sparkles size={14} color={ASBColors.primaryPurple} />
+              <Text style={styles.singleLineBannerText}>Discover Your Numerology — Calculate Soul & Life Path Numbers</Text>
+            </View>
 
             <GlassCard style={styles.guestFormCard}>
               <Text style={styles.inputLabel}>YOUR FULL NAME</Text>
@@ -324,29 +321,6 @@ export default function DashboardScreen() {
           </>
         )}
 
-        {/* REAL-TIME VIBRATIONAL DECISION CLOCK */}
-        <VibrationalClock />
-
-        {/* ASTRO247 FEATURE 3: Trust & Verification Badges */}
-        <GlassCard style={styles.trustCard}>
-          <View style={styles.trustGrid}>
-            <View style={styles.trustItem}>
-              <CheckCircle size={18} color={ASBColors.goodGreen} />
-              <Text style={styles.trustText}>100% Authentic Remedies</Text>
-            </View>
-
-            <View style={styles.trustItem}>
-              <Star size={18} color="#F59E0B" fill="#F59E0B" />
-              <Text style={styles.trustText}>4.9★ Rated App</Text>
-            </View>
-
-            <View style={styles.trustItem}>
-              <Award size={18} color={ASBColors.primaryPurple} />
-              <Text style={styles.trustText}>100K+ Satisfied Seekers</Text>
-            </View>
-          </View>
-        </GlassCard>
-
         {/* ASTRO247 FEATURE 1: Live Astrologer & Numerologist Consult Banner */}
         <GlassCard variant="purple" style={styles.consultBanner}>
           <View style={styles.consultRow}>
@@ -381,6 +355,9 @@ export default function DashboardScreen() {
             style={{ marginTop: 12 }}
           />
         </GlassCard>
+
+        {/* REAL-TIME VIBRATIONAL DECISION CLOCK SHIFTED TO BOTTOM */}
+        <VibrationalClock />
       </ScrollView>
 
       {/* Daily 3D Tarot Card Draw Modal */}
@@ -559,6 +536,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  singleLineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+  },
+  singleLineBannerText: {
+    fontSize: 12,
+    fontFamily: ASBFonts.bodyBold,
+    color: ASBColors.primaryPurple,
+    flex: 1,
+  },
   heroCard: {
     marginBottom: 14,
     padding: 16,
@@ -735,24 +730,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: ASBColors.textMuted,
     marginTop: 2,
-  },
-  trustCard: {
-    marginVertical: 14,
-    padding: 14,
-  },
-  trustGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  trustItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  trustText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: ASBColors.darkNavy,
   },
   ctaCard: {
     padding: 16,

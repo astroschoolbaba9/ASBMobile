@@ -38,8 +38,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     });
   }, [anim]);
 
-  const showToast = useCallback((options: ToastOptions | string) => {
-    const opts: ToastOptions = typeof options === 'string' ? { message: options, type: 'info' } : options;
+  const showToast = useCallback((options: ToastOptions | string | any) => {
+    let opts: ToastOptions;
+    if (typeof options === 'string') {
+      opts = { message: options, type: 'info' };
+    } else if (options && typeof options === 'object') {
+      const friendlyMsg = options.userFriendlyMessage || options.message || options.response?.data?.message || '✨ Connection Note: Please check details and try again.';
+      opts = {
+        title: options.title || (options.type === 'error' ? '✨ Note' : undefined),
+        message: friendlyMsg,
+        type: options.type || (options.userFriendlyMessage || options.response ? 'error' : 'info'),
+        actionLabel: options.actionLabel,
+        onAction: options.onAction,
+        duration: options.duration,
+      };
+    } else {
+      opts = { message: 'Notice', type: 'info' };
+    }
+
     const id = Date.now();
 
     setToast({ ...opts, id });

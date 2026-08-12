@@ -61,7 +61,7 @@ export default function ReportsScreen() {
       title: 'Mystical Triangle & Sacred Chaldean Geometry',
       desc: 'Sacred Chaldean triangle geometry, compound vibration pairs, and karmic destiny lines.',
       icon: <Sparkles size={22} color={ASBColors.crimsonMagenta} />,
-      route: '/reports/swot',
+      route: '/reports/mystical-triangle',
       badge: 'FEATURED',
     },
     {

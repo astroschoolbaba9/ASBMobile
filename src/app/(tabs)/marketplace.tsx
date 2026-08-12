@@ -29,12 +29,12 @@ export default function MarketplaceScreen() {
   const cardWidth = `${Math.floor(100 / numColumns) - 2}%`;
 
   const categories = [
-    { id: 'ALL', label: 'All Products' },
-    { id: 'CRYSTALS', label: 'Energised Crystals' },
-    { id: 'RUDRAKSHA', label: 'Rudraksha' },
-    { id: 'GEMSTONES', label: 'Gemstones' },
-    { id: 'YANTRAS', label: 'Yantras' },
-    { id: 'BRACELETS', label: 'Healing Bracelets' },
+    { id: 'ALL', label: '✨ All Products' },
+    { id: 'CRYSTALS', label: '🔮 Energised Crystals' },
+    { id: 'RUDRAKSHA', label: '📿 Rudraksha & Malas' },
+    { id: 'GEMSTONES', label: '💎 Gemstones' },
+    { id: 'YANTRAS', label: '🧿 Yantras' },
+    { id: 'BRACELETS', label: '✨ Healing Bracelets' },
   ];
 
   // Fetch Products Catalog from Real MERN API
@@ -60,18 +60,31 @@ export default function MarketplaceScreen() {
 
   const productsList = allProducts.filter((item: any) => {
     const q = search.toLowerCase().trim();
-    const catName = item.category || item.categoryId?.name || item.categoryId?.group || item.group || '';
-    const catMatch = selectedCategory === 'ALL' || catName.toUpperCase().includes(selectedCategory);
+    const catField = item.category || item.categoryId;
+    const catName = (typeof catField === 'object' ? (catField?.name || catField?.group || '') : (catField || '')).toLowerCase();
+    const groupName = (item.group || '').toLowerCase();
+    const title = (item.title || item.name || '').toLowerCase();
+    const desc = (item.description || '').toLowerCase();
+    const spiritualUse = (item.spiritualUse || '').toLowerCase();
+    const tags = Array.isArray(item.tags) ? item.tags.join(' ').toLowerCase() : '';
+    const fullSearchStr = `${catName} ${groupName} ${title} ${desc} ${spiritualUse} ${tags}`;
+
+    let catMatch = true;
+    if (selectedCategory === 'CRYSTALS') {
+      catMatch = fullSearchStr.includes('crystal') || fullSearchStr.includes('pyrite') || fullSearchStr.includes('amethyst') || fullSearchStr.includes('quartz') || fullSearchStr.includes('citrine');
+    } else if (selectedCategory === 'RUDRAKSHA') {
+      catMatch = fullSearchStr.includes('rudraksha') || fullSearchStr.includes('mala') || fullSearchStr.includes('bead');
+    } else if (selectedCategory === 'GEMSTONES') {
+      catMatch = fullSearchStr.includes('gem') || fullSearchStr.includes('ruby') || fullSearchStr.includes('emerald') || fullSearchStr.includes('sapphire') || fullSearchStr.includes('panna');
+    } else if (selectedCategory === 'YANTRAS') {
+      catMatch = fullSearchStr.includes('yantra') || fullSearchStr.includes('kavach') || fullSearchStr.includes('plate');
+    } else if (selectedCategory === 'BRACELETS') {
+      catMatch = fullSearchStr.includes('bracelet') || fullSearchStr.includes('band');
+    }
 
     if (!q) return catMatch;
 
-    const titleMatch = (item.title || item.name || '').toLowerCase().includes(q);
-    const descMatch = (item.description || '').toLowerCase().includes(q);
-    const spiritualMatch = (item.spiritualUse || '').toLowerCase().includes(q);
-    const categoryQueryMatch = catName.toLowerCase().includes(q);
-    const tagMatch = Array.isArray(item.tags) && item.tags.some((t: string) => t.toLowerCase().includes(q));
-
-    return (titleMatch || descMatch || spiritualMatch || categoryQueryMatch || tagMatch) && catMatch;
+    return fullSearchStr.includes(q) && catMatch;
   });
 
   const { showToast } = useToast();
@@ -120,7 +133,7 @@ export default function MarketplaceScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Enhanced Real Working Search Bar */}
+        {/* Enhanced Search Bar */}
         <View style={[styles.searchBar, search.length > 0 && styles.searchBarActive]}>
           <Search size={18} color={search.length > 0 ? ASBColors.primaryPurple : ASBColors.textMuted} />
           <TextInput
@@ -138,23 +151,7 @@ export default function MarketplaceScreen() {
           )}
         </View>
 
-        {/* Popular Quick Search Tags */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagScroll}>
-          <Text style={styles.tagHeader}>Popular:</Text>
-          {popularSearches.map((tag) => (
-            <TouchableOpacity
-              key={tag}
-              onPress={() => setSearch(search === tag ? '' : tag)}
-              style={[styles.tagPill, search.toLowerCase() === tag.toLowerCase() && styles.tagPillActive]}
-            >
-              <Text style={[styles.tagText, search.toLowerCase() === tag.toLowerCase() && styles.tagTextActive]}>
-                {tag}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Category Chips Carousel */}
+        {/* Flipkart / Amazon Style Category Bar */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
           {categories.map((c) => (
             <TouchableOpacity

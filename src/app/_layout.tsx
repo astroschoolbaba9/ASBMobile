@@ -61,42 +61,49 @@ export default function RootLayout() {
             <CartProvider>
               <StatusBar style="dark" />
               <NotificationDrawer />
-              <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="(auth)/register" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="(auth)/complete-profile" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="profile" options={{ headerShown: false }} />
-              <Stack.Screen name="reports/profession" options={{ headerShown: false }} />
-              <Stack.Screen name="reports/health" options={{ headerShown: false }} />
-              <Stack.Screen name="reports/relationship" options={{ headerShown: false }} />
-              <Stack.Screen name="reports/swot" options={{ headerShown: false }} />
-              <Stack.Screen name="reports/time-cycles" options={{ headerShown: false }} />
-              <Stack.Screen name="reports/pdf-viewer" options={{ headerShown: false }} />
-              <Stack.Screen name="tools/tarot" options={{ headerShown: false }} />
-              <Stack.Screen name="tools/consult-booking" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/product/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/cart" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/checkout" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/orders" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/order/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/gift-orders" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/courses" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/course/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/section/[key]" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/addresses" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/my-courses" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/payment-success" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/payment-failed" options={{ headerShown: false }} />
-              <Stack.Screen name="shop/payu-webview" options={{ headerShown: false }} />
-              <Stack.Screen name="info/about" options={{ headerShown: false }} />
-              <Stack.Screen name="info/terms" options={{ headerShown: false }} />
-              <Stack.Screen name="info/privacy" options={{ headerShown: false }} />
-              <Stack.Screen name="info/refund" options={{ headerShown: false }} />
-              <Stack.Screen name="info/shipping" options={{ headerShown: false }} />
-              <Stack.Screen name="info/contact" options={{ headerShown: false }} />
-              <Stack.Screen name="info/services" options={{ headerShown: false }} />
-            </Stack>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  animationDuration: 220,
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)/login" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="(auth)/register" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="(auth)/complete-profile" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+                <Stack.Screen name="profile" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/profession" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/health" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/relationship" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/swot" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/mystical-triangle" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/time-cycles" options={{ headerShown: false }} />
+                <Stack.Screen name="reports/pdf-viewer" options={{ headerShown: false }} />
+                <Stack.Screen name="tools/tarot" options={{ headerShown: false }} />
+                <Stack.Screen name="tools/consult-booking" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/product/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/cart" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/checkout" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/orders" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/order/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/gift-orders" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/courses" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/course/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/section/[key]" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/addresses" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/my-courses" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/payment-success" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/payment-failed" options={{ headerShown: false }} />
+                <Stack.Screen name="shop/payu-webview" options={{ headerShown: false }} />
+                <Stack.Screen name="info/about" options={{ headerShown: false }} />
+                <Stack.Screen name="info/terms" options={{ headerShown: false }} />
+                <Stack.Screen name="info/privacy" options={{ headerShown: false }} />
+                <Stack.Screen name="info/refund" options={{ headerShown: false }} />
+                <Stack.Screen name="info/shipping" options={{ headerShown: false }} />
+                <Stack.Screen name="info/contact" options={{ headerShown: false }} />
+                <Stack.Screen name="info/services" options={{ headerShown: false }} />
+              </Stack>
           </CartProvider>
         </NotificationProvider>
       </AuthProvider>

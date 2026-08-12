@@ -105,4 +105,28 @@ clients.forEach((client) => {
   }, (error) => {
     return Promise.reject(error);
   });
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (!error.response) {
+        error.userFriendlyMessage = '✨ Connection Issue: Unable to connect to ASB servers. Please check your internet connection and try again.';
+      } else {
+        const status = error.response.status;
+        const serverMsg = error.response.data?.message || error.response.data?.error || error.response.data?.detail;
+
+        if (status === 401 || status === 403) {
+          error.userFriendlyMessage = '🔐 Session Expired: Please log in again to continue.';
+        } else if (status === 404) {
+          error.userFriendlyMessage = serverMsg || '🌸 Item Not Found: The requested information or product could not be located.';
+        } else if (status >= 500) {
+          error.userFriendlyMessage = '✨ Cosmic Processing Note: Our servers are busy computing calculations. Please retry in a moment.';
+        } else {
+          error.userFriendlyMessage = serverMsg || '✨ Request Note: Please verify your input and try again.';
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
 });
+

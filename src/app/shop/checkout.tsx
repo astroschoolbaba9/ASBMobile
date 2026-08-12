@@ -4,7 +4,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, CreditCard, Truck, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Truck, CheckCircle, MapPin, Home, Briefcase, Compass } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
@@ -31,6 +32,8 @@ export default function CheckoutScreen() {
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'PAYU' | 'COD'>('PAYU');
+  const [addressTag, setAddressTag] = useState<'HOME' | 'WORK' | 'OTHER'>('HOME');
+  const [locationVerified, setLocationVerified] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -426,12 +429,60 @@ export default function CheckoutScreen() {
         </GlassCard>
       ) : (
         <View style={{ gap: 14 }}>
-          {/* Shipping Address Form */}
+          {/* Zomato-Style Shipping Address Form */}
           <GlassCard style={styles.card}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>DELIVERY ADDRESS</Text>
-              <TouchableOpacity onPress={handleUseCurrentLocation} style={styles.gpsBtn} disabled={locating}>
-                <Text style={styles.gpsBtnText}>{locating ? 'Locating...' : '📍 Use GPS Location'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MapPin size={16} color={ASBColors.primaryPurple} />
+                <Text style={styles.sectionTitle}>DELIVERY ADDRESS</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleUseCurrentLocation}
+                style={[styles.zomatoGpsBtn, locating && styles.zomatoGpsBtnActive]}
+                disabled={locating}
+              >
+                <Compass size={14} color={ASBColors.primaryPurple} />
+                <Text style={styles.zomatoGpsText}>
+                  {locating ? 'Detecting GPS...' : '📍 Auto-Detect Location'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {locationVerified && (
+              <Animated.View entering={Platform.OS !== 'web' ? FadeInDown.duration(400) : undefined} style={styles.locationSuccessBadge}>
+                <CheckCircle size={14} color={ASBColors.goodGreen} />
+                <Text style={styles.locationSuccessText}>
+                  GPS Verified: {city ? `${city}, ${state}` : 'Current Location Set'}
+                </Text>
+              </Animated.View>
+            )}
+
+            {/* Address Type Tag Selector (Zomato / Swiggy Style) */}
+            <Text style={styles.inputLabel}>SAVE ADDRESS AS</Text>
+            <View style={styles.tagSelectorRow}>
+              <TouchableOpacity
+                onPress={() => setAddressTag('HOME')}
+                style={[styles.addressTypeChip, addressTag === 'HOME' && styles.addressTypeChipActive]}
+              >
+                <Home size={14} color={addressTag === 'HOME' ? '#FFFFFF' : ASBColors.primaryPurple} />
+                <Text style={[styles.addressTypeText, addressTag === 'HOME' && styles.addressTypeTextActive]}>Home</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setAddressTag('WORK')}
+                style={[styles.addressTypeChip, addressTag === 'WORK' && styles.addressTypeChipActive]}
+              >
+                <Briefcase size={14} color={addressTag === 'WORK' ? '#FFFFFF' : ASBColors.primaryPurple} />
+                <Text style={[styles.addressTypeText, addressTag === 'WORK' && styles.addressTypeTextActive]}>Work</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setAddressTag('OTHER')}
+                style={[styles.addressTypeChip, addressTag === 'OTHER' && styles.addressTypeChipActive]}
+              >
+                <MapPin size={14} color={addressTag === 'OTHER' ? '#FFFFFF' : ASBColors.primaryPurple} />
+                <Text style={[styles.addressTypeText, addressTag === 'OTHER' && styles.addressTypeTextActive]}>Other</Text>
               </TouchableOpacity>
             </View>
 
@@ -559,18 +610,67 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  gpsBtn: {
+  zomatoGpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#F3E8FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: ASBColors.borderPurple,
   },
-  gpsBtnText: {
+  zomatoGpsBtnActive: {
+    backgroundColor: '#E5D5FF',
+  },
+  zomatoGpsText: {
     fontSize: 11,
     fontWeight: '700',
     color: ASBColors.primaryPurple,
+  },
+  locationSuccessBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: ASBColors.goodGreenBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  locationSuccessText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: ASBColors.goodGreen,
+  },
+  tagSelectorRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
+  addressTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3E8FF',
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+  },
+  addressTypeChipActive: {
+    backgroundColor: ASBColors.primaryPurple,
+    borderColor: ASBColors.primaryPurple,
+  },
+  addressTypeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: ASBColors.primaryPurple,
+  },
+  addressTypeTextActive: {
+    color: '#FFFFFF',
   },
   inputLabel: {
     fontSize: 10,

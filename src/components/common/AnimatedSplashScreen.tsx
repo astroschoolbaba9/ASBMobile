@@ -39,7 +39,7 @@ export const AnimatedSplashScreen: React.FC<{ onFinish?: () => void }> = ({ onFi
       withTiming(1, { duration: 1000 })
     );
 
-    progressWidth.value = withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) });
+    progressWidth.value = withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) });
 
     const timer = setTimeout(() => {
       onFinish?.();

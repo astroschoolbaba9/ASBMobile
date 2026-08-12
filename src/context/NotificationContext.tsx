@@ -110,12 +110,36 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const triggerSystemNotification = (title: string, message: string) => {
+  const triggerSystemNotification = async (title: string, message: string) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'granted') {
         try {
           new Notification(title, { body: message });
         } catch (e) {}
+      }
+    } else {
+      try {
+        const ExpoNotifications = require('expo-notifications');
+        if (ExpoNotifications && typeof ExpoNotifications.scheduleNotificationAsync === 'function') {
+          ExpoNotifications.setNotificationHandler({
+            handleNotification: async () => ({
+              shouldShowAlert: true,
+              shouldPlaySound: true,
+              shouldSetBadge: true,
+            }),
+          });
+          await ExpoNotifications.scheduleNotificationAsync({
+            content: {
+              title,
+              body: message,
+              sound: true,
+              priority: 'high',
+            },
+            trigger: null,
+          });
+        }
+      } catch (e) {
+        // Fallback for environment without expo-notifications
       }
     }
   };
@@ -124,6 +148,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window) {
       const perm = await Notification.requestPermission();
       return perm === 'granted';
+    } else {
+      try {
+        const ExpoNotifications = require('expo-notifications');
+        if (ExpoNotifications && typeof ExpoNotifications.requestPermissionsAsync === 'function') {
+          const { status } = await ExpoNotifications.requestPermissionsAsync();
+          return status === 'granted';
+        }
+      } catch (e) {}
     }
     return true;
   };
