@@ -171,67 +171,67 @@ export default function DashboardScreen() {
             </GlassCard>
           </>
         ) : (
-          /* LOGGED-IN DASHBOARD HERO */
+          /* LOGGED-IN DASHBOARD HERO (Sleek Consolidated Blueprint & Daily Guidance) */
           <Animated.View entering={Platform.OS !== 'web' ? FadeInDown.delay(100).duration(600) : undefined}>
-            <GlassCard variant="purple" style={styles.heroCard}>
-              <View style={styles.heroRow}>
-                <View style={styles.heroTextCol}>
+            <GlassCard variant="purple" style={styles.sleekHeroCard}>
+              <View style={styles.sleekHeroTop}>
+                <View style={{ flex: 1 }}>
                   <View style={styles.cosmicTagRow}>
                     <Sparkles size={12} color={ASBColors.primaryPurple} />
                     <Text style={styles.heroSub}>PERSONAL BLUEPRINT</Text>
                   </View>
                   <Text style={styles.heroTitle}>Namaste, {effectiveName}</Text>
-                  
+
                   <TouchableOpacity
                     activeOpacity={0.8}
                     style={styles.dobBadgeRow}
                     onPress={() => setDobModalVisible(true)}
                   >
-                    <CheckCircle size={14} color={ASBColors.goodGreen} />
-                    <Text style={styles.dobText}>DOB: {effectiveDob}</Text>
-                    <Edit3 size={12} color={ASBColors.textMuted} style={{ marginLeft: 4 }} />
+                    <CheckCircle size={13} color={effectiveDob ? ASBColors.goodGreen : ASBColors.crimsonMagenta} />
+                    <Text style={styles.dobText}>{effectiveDob ? `DOB: ${effectiveDob}` : 'Set Your Birth Date'}</Text>
+                    <Edit3 size={11} color={ASBColors.textMuted} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
                 </View>
-                
-                <View style={styles.numberBadgeLarge}>
-                  <Text style={styles.numberBadgeValue}>{profile.moolank}</Text>
-                  <Text style={styles.numberBadgeLabel}>Soul #{profile.moolank}</Text>
+
+                {/* Soul & Destiny Number Pill Badges */}
+                <View style={styles.soulBadgeContainer}>
+                  <View style={styles.soulBadgeCircle}>
+                    <Text style={styles.soulBadgeValue}>{profile.moolank}</Text>
+                    <Text style={styles.soulBadgeLabel}>Soul</Text>
+                  </View>
+
+                  <View style={[styles.soulBadgeCircle, { backgroundColor: '#FDF4FF' }]}>
+                    <Text style={[styles.soulBadgeValue, { color: ASBColors.crimsonMagenta }]}>{profile.bhagyank}</Text>
+                    <Text style={styles.soulBadgeLabel}>Path</Text>
+                  </View>
                 </View>
+              </View>
+
+              {/* Compact Daily Guidance Row */}
+              <View style={styles.compactGuidanceBar}>
+                <View style={styles.compactGuidanceItem}>
+                  <Text style={styles.compactGuidanceLabel}>LUCKY</Text>
+                  <Text style={styles.compactGuidanceVal}>{profile.moolank} & {profile.bhagyank}</Text>
+                </View>
+                <View style={styles.compactDivider} />
+                <View style={styles.compactGuidanceItem}>
+                  <Text style={styles.compactGuidanceLabel}>COLOR</Text>
+                  <Text style={styles.compactGuidanceVal}>{getLuckyColor(profile.moolank)}</Text>
+                </View>
+                <View style={styles.compactDivider} />
+                <View style={styles.compactGuidanceItem}>
+                  <Text style={styles.compactGuidanceLabel}>YEAR</Text>
+                  <Text style={styles.compactGuidanceVal}>Year #{profile.personalYear}</Text>
+                </View>
+              </View>
+
+              {/* Compact Daily Mantra Line */}
+              <View style={styles.compactMantraBox}>
+                <Sun size={12} color={ASBColors.primaryPurple} />
+                <Text style={styles.compactMantraText} numberOfLines={1}>{mantraOfDay}</Text>
               </View>
             </GlassCard>
           </Animated.View>
-        )}
-
-        {/* ASTRO247 FEATURE 2: Daily Divine Insights Card (Only shown when calculated or logged in) */}
-        {(isAuthenticated || guestCalculated) && (
-          <GlassCard style={styles.dailyInsightsCard}>
-            <View style={styles.cardHeaderRow}>
-              <Sun size={18} color={ASBColors.primaryPurple} />
-              <Text style={styles.dailyTitle}>DAILY DIVINE GUIDANCE</Text>
-            </View>
-
-            <View style={styles.insightGrid}>
-              <View style={styles.insightItem}>
-                <Text style={styles.insightLabel}>LUCKY NUMBER</Text>
-                <Text style={styles.insightVal}>{profile.moolank} & {profile.bhagyank}</Text>
-              </View>
-
-              <View style={styles.insightItem}>
-                <Text style={styles.insightLabel}>LUCKY COLOR</Text>
-                <Text style={styles.insightVal}>{getLuckyColor(profile.moolank)}</Text>
-              </View>
-
-              <View style={styles.insightItem}>
-                <Text style={styles.insightLabel}>PERSONAL YEAR</Text>
-                <Text style={styles.insightVal}>Year #{profile.personalYear}</Text>
-              </View>
-            </View>
-
-            <View style={styles.mantraBox}>
-              <Sparkles size={14} color={ASBColors.primaryPurple} />
-              <Text style={styles.mantraText}>{mantraOfDay}</Text>
-            </View>
-          </GlassCard>
         )}
 
         {/* NUMEROLOGY SUITE & TOOLS GRID */}
@@ -286,40 +286,6 @@ export default function DashboardScreen() {
             <Text style={styles.moduleDesc}>100-Page Report</Text>
           </TouchableOpacity>
         </View>
-
-        {/* CORE NUMEROLOGY TRIANGLE SECTION (Only shown when calculated or logged in) */}
-        {(isAuthenticated || guestCalculated) && (
-          <>
-            <Text style={styles.sectionHeading}>CORE NUMEROLOGY TRIANGLE</Text>
-
-            <FlipNumerologyCard
-              code="G"
-              title="SOUL PURPOSE NUMBER"
-              subTitle="Your core spiritual frequency"
-              numberValue={profile.moolank}
-              traitText={`Number ${profile.moolank}: Spiritual Leader`}
-              description={`Soul Number ${profile.moolank} dictates your inner drive, subconscious desires, and baseline vibration.`}
-            />
-
-            <FlipNumerologyCard
-              code="E"
-              title="LIFE PATH NUMBER"
-              subTitle="Your daily energy vibration"
-              numberValue={profile.bhagyank}
-              traitText={`Number ${profile.bhagyank}: Life Blueprint`}
-              description={`Life Path ${profile.bhagyank} governs your natural talents, career success, and primary life lessons.`}
-            />
-
-            <FlipNumerologyCard
-              code="F"
-              title="EXPRESSION NUMBER"
-              subTitle="Your outer manifestation"
-              numberValue={profile.expression}
-              traitText={`Number ${profile.expression}: Outer Manifestor`}
-              description={`Expression Number ${profile.expression} reflects how others perceive your talent and goals.`}
-            />
-          </>
-        )}
 
         {/* ASTRO247 FEATURE 1: Live Astrologer & Numerologist Consult Banner */}
         <GlassCard variant="purple" style={styles.consultBanner}>
@@ -551,6 +517,89 @@ const styles = StyleSheet.create({
   singleLineBannerText: {
     fontSize: 12,
     fontFamily: ASBFonts.bodyBold,
+    color: ASBColors.primaryPurple,
+    flex: 1,
+  },
+  sleekHeroCard: {
+    marginBottom: 14,
+    padding: 14,
+  },
+  sleekHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  soulBadgeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  soulBadgeCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+  },
+  soulBadgeValue: {
+    fontSize: 16,
+    fontFamily: ASBFonts.heading,
+    color: ASBColors.primaryPurple,
+    lineHeight: 18,
+  },
+  soulBadgeLabel: {
+    fontSize: 8,
+    color: ASBColors.textMuted,
+    marginTop: -2,
+  },
+  compactGuidanceBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+    marginBottom: 10,
+  },
+  compactGuidanceItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  compactGuidanceLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: ASBColors.textMuted,
+    letterSpacing: 0.5,
+  },
+  compactGuidanceVal: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: ASBColors.primaryPurple,
+    marginTop: 1,
+  },
+  compactDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: ASBColors.borderPurple,
+  },
+  compactMantraBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  compactMantraText: {
+    fontSize: 10,
+    fontWeight: '600',
     color: ASBColors.primaryPurple,
     flex: 1,
   },
