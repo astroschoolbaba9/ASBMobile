@@ -95,20 +95,20 @@ export default function ConsultBookingScreen() {
         </GlassCard>
       ) : (
         <GlassCard style={styles.card}>
-          <Text style={styles.inputLabel}>YOUR FULL NAME</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full Name" />
+          <Text style={styles.inputLabel}>YOUR FULL NAME *</Text>
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full Name" placeholderTextColor={ASBColors.textMuted} />
 
-          <Text style={styles.inputLabel}>PHONE NUMBER (WHATSAPP)</Text>
-          <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Phone" />
+          <Text style={styles.inputLabel}>PHONE NUMBER (WHATSAPP) *</Text>
+          <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Phone Number" placeholderTextColor={ASBColors.textMuted} />
 
           <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
-          <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" placeholder="Email" />
+          <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" placeholder="Email Address" placeholderTextColor={ASBColors.textMuted} />
 
           <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY)</Text>
-          <TextInput style={styles.input} value={dob} onChangeText={setDob} placeholder="DOB" />
+          <TextInput style={styles.input} value={dob} onChangeText={setDob} placeholder="e.g. 15-08-1995" placeholderTextColor={ASBColors.textMuted} />
 
           <Text style={styles.inputLabel}>PRIMARY CONSULTATION TOPIC</Text>
-          <TextInput style={styles.input} value={topic} onChangeText={setTopic} placeholder="Topic" />
+          <TextInput style={styles.input} value={topic} onChangeText={setTopic} placeholder="Topic" placeholderTextColor={ASBColors.textMuted} />
 
           <GradientButton
             title="Schedule Consultation Session"
@@ -127,26 +127,26 @@ export default function ConsultBookingScreen() {
         <Text style={{ fontSize: 12, color: ASBColors.textMuted, marginBottom: 12 }}>
           Follow our official social media channels for daily cosmic reports, numerology tips & live Q&A sessions:
         </Text>
-        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+        <View style={{ gap: 10 }}>
           <TouchableOpacity
             style={[styles.socialBtn, { backgroundColor: '#E1306C' }]}
             onPress={() => Linking.openURL('https://www.instagram.com/astroschoolbaba/')}
           >
-            <Text style={styles.socialBtnText}>📸 Instagram</Text>
+            <Text style={styles.socialBtnText}>📸 Instagram Official (@astroschoolbaba)</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.socialBtn, { backgroundColor: '#1877F2' }]}
             onPress={() => Linking.openURL('https://www.facebook.com/astroschoolbaba/')}
           >
-            <Text style={styles.socialBtnText}>📘 Facebook</Text>
+            <Text style={styles.socialBtnText}>📘 Facebook Official Page</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.socialBtn, { backgroundColor: '#25D366' }]}
             onPress={() => Linking.openURL('https://wa.me/919911500291')}
           >
-            <Text style={styles.socialBtnText}>💬 WhatsApp</Text>
+            <Text style={styles.socialBtnText}>💬 WhatsApp Direct Support (+91 99115 00291)</Text>
           </TouchableOpacity>
         </View>
       </GlassCard>

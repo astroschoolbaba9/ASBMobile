@@ -12,6 +12,7 @@ import { mobileApi, reportApi, formatDobForApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
+import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
 
 import { RefreshControl } from 'react-native';
 
@@ -55,9 +56,15 @@ export default function MobileNumScreen() {
   }, []);
 
   React.useEffect(() => {
-    if (user?.name && !name) setName(user.name);
+    if (user?.name) setName(user.name);
     if (user?.dob) setDob(user.dob);
     if (user?.phone && !mobile) setMobile(user.phone);
+    if (!user) {
+      getGuestProfile().then((g) => {
+        if (g.name && !name) setName(g.name);
+        if (g.dob && !dob) setDob(g.dob);
+      });
+    }
   }, [user]);
 
   const [loading, setLoading] = useState(false);
@@ -77,6 +84,7 @@ export default function MobileNumScreen() {
       return;
     }
 
+    saveGuestProfile(name.trim(), dob.trim());
     setLoading(true);
     setResult(null);
 

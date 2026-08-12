@@ -40,6 +40,7 @@ import { NotificationBell } from '../../components/notification/NotificationBell
 import { useStreak } from '../../hooks/useStreak';
 import { useToast } from '../../context/ToastContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
 
 export default function DashboardScreen() {
   const { user, isAuthenticated, updateDob } = useAuth();
@@ -57,6 +58,13 @@ export default function DashboardScreen() {
   const [guestCalculated, setGuestCalculated] = useState(false);
   const [cardModalVisible, setCardModalVisible] = useState(false);
 
+  React.useEffect(() => {
+    getGuestProfile().then((g) => {
+      if (g.name && !guestName) setGuestName(g.name);
+      if (g.dob && !guestDob) setGuestDob(g.dob);
+    });
+  }, []);
+
   const effectiveName = isAuthenticated ? (user?.name && user.name.length > 2 && user.name.toLowerCase() !== 'uikjhd' ? user.name : '') : (guestName || '');
   const effectiveDob = isAuthenticated ? (user?.dob || '') : guestDob;
 
@@ -68,7 +76,12 @@ export default function DashboardScreen() {
 
   const handleSaveDob = async () => {
     if (tempDob.trim()) {
-      await updateDob(tempDob.trim());
+      if (isAuthenticated) {
+        await updateDob(tempDob.trim());
+      } else {
+        setGuestDob(tempDob.trim());
+        saveGuestProfile(guestName, tempDob.trim());
+      }
       setDobModalVisible(false);
       showToast({ type: 'success', title: 'DOB Saved', message: 'Your birth details have been updated.' });
     }
@@ -93,6 +106,7 @@ export default function DashboardScreen() {
       showToast({ type: 'error', title: '🔮 Birth Date Guidance', message: 'Please enter a valid Date of Birth in DD-MM-YYYY format (e.g. 15-08-1995).' });
       return;
     }
+    saveGuestProfile(guestName.trim(), guestDob.trim());
     setGuestCalculated(true);
     addXp(10);
     showToast({ type: 'success', title: '✨ Cosmic Blueprint Unlocked!', message: 'Navigating to your Sacred Chaldean Geometry & Mystical Triangle report...' });
@@ -368,9 +382,11 @@ export default function DashboardScreen() {
             <TextInput
               style={styles.modalInput}
               value={tempDob}
-              onChangeText={setTempDob}
-              placeholder="DD/MM/YYYY (e.g. 15/08/1995)"
+              onChangeText={(t) => setTempDob(formatDobInput(t))}
+              placeholder="DD-MM-YYYY (e.g. 11-04-2004)"
               placeholderTextColor={ASBColors.textMuted}
+              keyboardType="number-pad"
+              maxLength={10}
             />
 
             <View style={styles.modalBtnRow}>

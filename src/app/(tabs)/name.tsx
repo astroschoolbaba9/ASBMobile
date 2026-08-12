@@ -68,6 +68,8 @@ const CHALDEAN_COMPOUND_MEANINGS: Record<number, string> = {
   51: 'High Military / Executive Power — Unstoppable ambition.',
 };
 
+import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
+
 export default function NameScreen() {
   const { user, updateProfile } = useAuth();
   const { showToast } = useToast();
@@ -81,8 +83,14 @@ export default function NameScreen() {
   }, []);
 
   React.useEffect(() => {
-    if (user?.name && !name) setName(user.name);
+    if (user?.name) setName(user.name);
     if (user?.dob) setDob(user.dob);
+    if (!user) {
+      getGuestProfile().then((g) => {
+        if (g.name && !name) setName(g.name);
+        if (g.dob && !dob) setDob(g.dob);
+      });
+    }
   }, [user]);
 
   const handleApplySpelling = async (newName: string) => {
@@ -130,6 +138,7 @@ export default function NameScreen() {
       showToast({ type: 'error', title: '📅 Date of Birth Required', message: 'Please enter your Date of Birth (DD-MM-YYYY) to analyze your birth chart.' });
       return;
     }
+    saveGuestProfile(name.trim(), dob.trim());
     setLoading(true);
     setResult(null);
     setRecommendations([]);

@@ -1,8 +1,5 @@
-// mobile-app/src/app/reports/relationship.tsx
-// Relationship & Marriage Compatibility Report Screen with Social Share Cards
-
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Heart, Star, Sparkles } from 'lucide-react-native';
 import { ASBColors, ASBFonts } from '../../theme/tokens';
@@ -14,6 +11,7 @@ import { useToast } from '../../context/ToastContext';
 import { SocialShareCard } from '../../components/common/SocialShareCard';
 import { calculateRelationshipCompatibility } from '../../utils/numerologyMath';
 import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
+import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
 
 export default function RelationshipReportScreen() {
   const router = useRouter();
@@ -24,6 +22,23 @@ export default function RelationshipReportScreen() {
   const [partner2Name, setPartner2Name] = useState('');
   const [partner2Dob, setPartner2Dob] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (user?.name) setPartner1Name(user.name);
+    if (user?.dob) setPartner1Dob(user.dob);
+    if (!user) {
+      getGuestProfile().then((g) => {
+        if (g.name && !partner1Name) setPartner1Name(g.name);
+        if (g.dob && !partner1Dob) setPartner1Dob(g.dob);
+      });
+    }
+  }, [user]);
+
+  const handleRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
 
   const initialCalc = (partner1Dob && partner2Dob) ? calculateRelationshipCompatibility(partner1Name || 'Partner 1', partner1Dob, partner2Name || 'Partner 2', partner2Dob) : null;
   const [report, setReport] = useState<any>(initialCalc);
@@ -38,6 +53,7 @@ export default function RelationshipReportScreen() {
       return;
     }
 
+    saveGuestProfile(partner1Name, partner1Dob);
     setLoading(true);
 
     const dob1Formatted = formatDobForApi(partner1Dob);
@@ -91,7 +107,11 @@ export default function RelationshipReportScreen() {
   const marriageOutlookText = report?.marriage_outlook || initialCalc?.marriage_outlook || 'Enter details above to analyze long-term outlook.';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ASBColors.primaryPurple} />}
+    >
       {/* Header */}
       <View style={styles.navRow}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -105,36 +125,40 @@ export default function RelationshipReportScreen() {
         <Text style={styles.sectionTitle}>ENTER PARTNER DETAILS</Text>
 
         <View style={styles.partnerBox}>
-          <Text style={styles.pLabel}>PARTNER 1 (YOU)</Text>
+          <Text style={styles.pLabel}>PARTNER 1 (YOU) *</Text>
           <TextInput
             style={styles.input}
             value={partner1Name}
             onChangeText={setPartner1Name}
             placeholder="Full Name"
+            placeholderTextColor={ASBColors.textMuted}
           />
           <TextInput
             style={styles.input}
             value={partner1Dob}
             onChangeText={(text) => setPartner1Dob(formatDobInput(text))}
             placeholder="DOB (DD-MM-YYYY)"
+            placeholderTextColor={ASBColors.textMuted}
             keyboardType="number-pad"
             maxLength={10}
           />
         </View>
 
         <View style={styles.partnerBox}>
-          <Text style={[styles.pLabel, { color: ASBColors.crimsonMagenta }]}>PARTNER 2</Text>
+          <Text style={[styles.pLabel, { color: ASBColors.crimsonMagenta }]}>PARTNER 2 *</Text>
           <TextInput
             style={styles.input}
             value={partner2Name}
             onChangeText={setPartner2Name}
             placeholder="Full Name"
+            placeholderTextColor={ASBColors.textMuted}
           />
           <TextInput
             style={styles.input}
             value={partner2Dob}
             onChangeText={(text) => setPartner2Dob(formatDobInput(text))}
             placeholder="DOB (DD-MM-YYYY)"
+            placeholderTextColor={ASBColors.textMuted}
             keyboardType="number-pad"
             maxLength={10}
           />
@@ -243,10 +267,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   input: {
-    backgroundColor: ASBColors.bgWarmIvory,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 13,
     color: ASBColors.darkNavy,
   },

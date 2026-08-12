@@ -1,8 +1,5 @@
-// mobile-app/src/app/(tabs)/reports.tsx
-// Full Numerology Reports Center Screen
-
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { FileText, Briefcase, Heart, Shield, Calendar, BookOpen, UserCheck, Sparkles, ChevronRight, CheckCircle, User, Lock } from 'lucide-react-native';
 import { ASBColors, ASBFonts, ASBShadows } from '../../theme/tokens';
@@ -16,6 +13,12 @@ export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
 
   const filters = [
     { id: 'ALL', label: 'All Reports' },
@@ -108,7 +111,11 @@ export default function ReportsScreen() {
       : reportsList.filter((item) => item.category === selectedFilter || item.category === 'ALL');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: Math.max(16, insets.top + 8) }]}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: Math.max(16, insets.top + 8) }]}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ASBColors.primaryPurple} />}
+    >
       <Text style={styles.headerTitle}>COSMIC REPORTS CENTER</Text>
       <Text style={styles.headerSubtitle}>Select a report module to view deep numerical insights</Text>
 

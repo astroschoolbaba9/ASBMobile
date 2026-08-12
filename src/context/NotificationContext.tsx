@@ -106,6 +106,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     });
 
+    // Prompt notification permission on app launch
+    requestPushPermission();
+
     syncBackendNotifications();
     const interval = setInterval(syncBackendNotifications, 30000); // 30s live sync interval
     return () => clearInterval(interval);
