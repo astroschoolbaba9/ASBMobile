@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "mobile-app",
+    "slug": "mobile-app",
+    "owner": "astroschoolbaba9",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/asb_logo.jpg",
+    "scheme": "mobileapp",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/asb_logo.jpg"
+    },
+    "android": {
+      "package": "com.astroschoolbaba.mobileapp",
+      "adaptiveIcon": {
+        "backgroundColor": "#1A0B2E",
+        "foregroundImage": "./assets/images/asb_logo.jpg",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/asb_logo.jpg"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1A0B2E",
+          "image": "./assets/images/asb_logo.jpg",
+          "imageWidth": 200
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c36eca41-6b5d-431d-8339-f174e4e0c6d7"
+      }
+    }
+  }
+}
