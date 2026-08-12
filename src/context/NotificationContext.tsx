@@ -20,6 +20,7 @@ interface NotificationContextType {
   notifications: AppNotification[];
   unreadCount: number;
   drawerOpen: boolean;
+  pushToken: string;
   setDrawerOpen: (open: boolean) => void;
   addNotification: (item: Omit<AppNotification, 'id' | 'read' | 'timestamp'>) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
@@ -150,6 +151,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  const [pushToken, setPushToken] = useState<string>('');
+
   const requestPushPermission = async (): Promise<boolean> => {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window) {
       const perm = await Notification.requestPermission();
@@ -157,8 +160,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } else {
       try {
         const ExpoNotifications = require('expo-notifications');
+        const ExpoConstants = require('expo-constants');
+
         if (ExpoNotifications && typeof ExpoNotifications.requestPermissionsAsync === 'function') {
           const { status } = await ExpoNotifications.requestPermissionsAsync();
+          if (status === 'granted' && typeof ExpoNotifications.getExpoPushTokenAsync === 'function') {
+            try {
+              const projectId = ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId || '9f3c4fe8-95a0-4f4e-a359-29e558d02eb5';
+              const tokenRes = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
+              if (tokenRes?.data) {
+                setPushToken(tokenRes.data);
+                console.log('📱 EXPO PUSH TOKEN:', tokenRes.data);
+              }
+            } catch (err) {}
+          }
           return status === 'granted';
         }
       } catch (e) {}
@@ -201,6 +216,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       saveStoredNotifications(updated);
       return updated;
     });
+
+    try {
+      await crystalApi.patch('/api/notifications/read-all');
+    } catch (e) {}
   }, []);
 
   const clearNotifications = useCallback(async () => {
@@ -214,6 +233,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         notifications,
         unreadCount,
         drawerOpen,
+        pushToken,
         setDrawerOpen,
         addNotification,
         markAsRead,

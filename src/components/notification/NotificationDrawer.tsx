@@ -4,14 +4,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, Bell, Package, Sparkles, BookOpen, ShieldCheck, CheckCheck, Trash2 } from 'lucide-react-native';
+import { X, Bell, ShoppingBag, Sparkles, BookOpen, ShieldCheck, Check, Trash } from 'lucide-react-native';
 import { ASBColors } from '../../theme/tokens';
 import { GlassCard } from '../common/GlassCard';
 import { useNotifications, AppNotification } from '../../context/NotificationContext';
 
 export const NotificationDrawer: React.FC = () => {
   const router = useRouter();
-  const { notifications, drawerOpen, setDrawerOpen, markAsRead, markAllAsRead, clearNotifications, requestPushPermission } = useNotifications();
+  const { notifications, drawerOpen, pushToken, setDrawerOpen, markAsRead, markAllAsRead, clearNotifications, requestPushPermission } = useNotifications();
   const [activeTab, setActiveTab] = useState<'ALL' | 'ORDERS' | 'COSMIC' | 'COURSES'>('ALL');
 
   const filtered = notifications.filter((n) => {
@@ -24,7 +24,7 @@ export const NotificationDrawer: React.FC = () => {
   const getIcon = (type: AppNotification['type']) => {
     switch (type) {
       case 'order':
-        return <Package size={18} color={ASBColors.royalViolet} />;
+        return <ShoppingBag size={18} color={ASBColors.royalViolet} />;
       case 'cosmic':
         return <Sparkles size={18} color={ASBColors.sacredGold} />;
       case 'course':
@@ -81,7 +81,7 @@ export const NotificationDrawer: React.FC = () => {
           {/* Action Row */}
           <View style={styles.actionRow}>
             <TouchableOpacity onPress={markAllAsRead} style={styles.actionBtn}>
-              <CheckCheck size={14} color={ASBColors.primaryPurple} />
+              <Check size={14} color={ASBColors.primaryPurple} />
               <Text style={styles.actionText}>Mark All Read</Text>
             </TouchableOpacity>
 
@@ -91,10 +91,17 @@ export const NotificationDrawer: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={clearNotifications} style={styles.actionBtn}>
-              <Trash2 size={14} color={ASBColors.errorRed} />
+              <Trash size={14} color={ASBColors.errorRed} />
               <Text style={[styles.actionText, { color: ASBColors.errorRed }]}>Clear</Text>
             </TouchableOpacity>
           </View>
+
+          {pushToken ? (
+            <View style={styles.tokenBox}>
+              <Text style={styles.tokenLabel}>📱 Device Push Token:</Text>
+              <Text style={styles.tokenVal} numberOfLines={1} selectable>{pushToken}</Text>
+            </View>
+          ) : null}
 
           {/* Filter Tabs */}
           <View style={styles.tabsRow}>
@@ -225,4 +232,16 @@ const styles = StyleSheet.create({
   itemTime: { fontSize: 10, color: ASBColors.textMuted, marginLeft: 6 },
   itemMsg: { fontSize: 12, color: ASBColors.textMuted, lineHeight: 16 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ASBColors.royalViolet, marginTop: 6 },
+  tokenBox: {
+    backgroundColor: '#FAF5FF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9D5FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tokenLabel: { fontSize: 11, fontWeight: '700', color: ASBColors.primaryPurple },
+  tokenVal: { fontSize: 10, color: ASBColors.darkNavy, flex: 1 },
 });

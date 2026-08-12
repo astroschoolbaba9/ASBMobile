@@ -50,4 +50,9 @@ declare module 'lucide-react-native' {
   export const Droplets: Icon;
   export const Wind: Icon;
   export const Globe: Icon;
+  export const Bell: Icon;
+  export const Package: Icon;
+  export const Trash: Icon;
+  export const Trash2: Icon;
+  export const CheckCheck: Icon;
 }
