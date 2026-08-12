@@ -77,39 +77,64 @@ export default function NameScreen() {
     const dobFormatted = formatDobForApi(dob);
 
     try {
-      const res = await crystalApi.post('/api/me', { name: name.trim() });
-    } catch (e) {}
+      // 1. Try Real Flask Name Numerology Backend API
+      const [analyzeRes, recRes] = await Promise.all([
+        nameApi.post('/api/analyze', { name: name.trim(), dob: dobFormatted, profession }),
+        nameApi.post('/api/recommendations', { name: name.trim(), dob: dobFormatted, profession }),
+      ]);
 
-    // Calculate 100% Real Chaldean Name Numerology & Lo Shu Grid Analysis
-    calculateMockName(name.trim());
-    setLoading(false);
+      if (analyzeRes.data) {
+        const raw = analyzeRes.data;
+        const letters = (raw.letters || []).map((l: any) => ({ char: l.letter || l.char, val: l.val || l.value }));
+
+        setResult({
+          name_breakdown: {
+            compound: raw.compound_number || raw.compound || 24,
+            root: raw.root_number || raw.root || 6,
+            strength: raw.strength || (raw.is_favorable ? 'HIGH VIBRATION' : 'BALANCED VIBRATION'),
+            letters: letters.length > 0 ? letters : computeLetterBreakdown(name.trim()),
+          },
+          target: raw.target_compound || 32,
+          compatibility: raw.compatibility || '96% HIGH HARMONY',
+          loshu_grid: raw.loshu_grid || {},
+          missing_numbers: raw.missing_numbers || [],
+        });
+      }
+
+      if (recRes.data && Array.isArray(recRes.data.recommendations)) {
+        setRecommendations(recRes.data.recommendations);
+      } else {
+        calculateMockRecommendations(name.trim());
+      }
+    } catch (e) {
+      console.warn('Name API fallback to local Chaldean engine:', e);
+      calculateMockName(name.trim());
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const calculateMockName = (inputName: string) => {
-    const prof = calculateNumerologyProfile(dob, inputName);
-
-    let compound = 0;
+  const computeLetterBreakdown = (inputName: string) => {
     const letters = [];
-    const upper = inputName.toUpperCase();
-    for (let char of upper) {
+    for (let char of inputName.toUpperCase()) {
       if (CHALDEAN_MAP[char]) {
-        compound += CHALDEAN_MAP[char];
         letters.push({ char, val: CHALDEAN_MAP[char] });
       }
     }
-    const root = prof.expression;
+    return letters;
+  };
 
-    // Favorable Chaldean compound targets for profession
-    const targetCompound = [24, 32, 42, 51, 15, 19, 23, 37].find(c => c > compound) || (compound + 5);
-
-    // Compute dynamic spelling recommendations
+  const calculateMockRecommendations = (inputName: string) => {
     const variations = [
       { prefix: '', suffix: ' S', addVal: 3, reason: 'Suffix "S" (+3) shifts compound to align with financial & luxury growth.' },
       { prefix: 'A ', suffix: '', addVal: 1, reason: 'Prefix "A" (+1) establishes royal leadership and independent authority.' },
       { prefix: '', suffix: 'h', addVal: 5, reason: 'Adding "h" (+5) amplifies Mercury communication and trade frequencies.' },
       { prefix: '', suffix: ' I', addVal: 1, reason: 'Adding "I" (+1) enhances intuition and creative execution power.' },
     ];
-
+    let compound = 0;
+    for (let char of inputName.toUpperCase()) {
+      if (CHALDEAN_MAP[char]) compound += CHALDEAN_MAP[char];
+    }
     const dynamicRecs = variations.map((v) => {
       const newName = `${v.prefix}${inputName}${v.suffix}`.trim();
       const newCompound = compound + v.addVal;
@@ -117,17 +142,28 @@ export default function NameScreen() {
       while (newRoot > 9) {
         newRoot = String(newRoot).split('').reduce((s, d) => s + parseInt(d, 10), 0);
       }
-      const isHarmonious = [1, 3, 5, 6, 9].includes(newRoot);
-      const matchScore = isHarmonious ? 95 + (newCompound % 4) : 88 + (newCompound % 5);
       return {
         name: newName,
         compound: newCompound,
         root: newRoot,
-        match: `${matchScore}%`,
+        match: `${92 + (newCompound % 7)}%`,
         reason: `${v.reason} (Target Compound #${newCompound}, Root #${newRoot})`,
       };
     });
+    setRecommendations(dynamicRecs);
+  };
 
+  const calculateMockName = (inputName: string) => {
+    const prof = calculateNumerologyProfile(dob, inputName);
+
+    let compound = 0;
+    const letters = computeLetterBreakdown(inputName);
+    for (let item of letters) {
+      compound += item.val;
+    }
+    const root = prof.expression;
+
+    const targetCompound = [24, 32, 42, 51, 15, 19, 23, 37].find(c => c > compound) || (compound + 5);
     const isNameFavorable = [1, 3, 5, 6, 9].includes(root);
 
     setResult({
@@ -143,7 +179,7 @@ export default function NameScreen() {
       missing_numbers: prof.missingDigits,
     });
 
-    setRecommendations(dynamicRecs);
+    calculateMockRecommendations(inputName);
   };
 
   return (
@@ -248,7 +284,22 @@ export default function NameScreen() {
       {/* Results Dashboard */}
       {result && (
         <View style={styles.resultsContainer}>
-          <Text style={styles.sectionHeading}>CHALDEAN VIBRATION ANALYSIS</Text>
+          {/* Letter by Letter Chaldean Value Grid */}
+          {Array.isArray(result.name_breakdown?.letters) && result.name_breakdown.letters.length > 0 && (
+            <GlassCard style={styles.letterBreakdownCard}>
+              <Text style={styles.letterCardTitle}>CHALDEAN LETTER BREAKDOWN</Text>
+              <View style={styles.letterGridRow}>
+                {result.name_breakdown.letters.map((item: any, idx: number) => (
+                  <View key={idx} style={styles.letterChip}>
+                    <Text style={styles.letterChar}>{item.char}</Text>
+                    <View style={styles.letterValBadge}>
+                      <Text style={styles.letterValText}>{item.val}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </GlassCard>
+          )}
 
           <View style={styles.metricRow}>
             <View style={[styles.metricBox, ASBShadows.cardRest]}>
@@ -431,6 +482,48 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 13,
     color: ASBColors.darkNavy,
+  },
+  letterBreakdownCard: {
+    padding: 14,
+    marginBottom: 4,
+  },
+  letterCardTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: ASBColors.primaryPurple,
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  letterGridRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  letterChip: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: ASBColors.borderPurple,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    minWidth: 34,
+  },
+  letterChar: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: ASBColors.darkNavy,
+  },
+  letterValBadge: {
+    backgroundColor: '#F3E8FF',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    marginTop: 2,
+  },
+  letterValText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: ASBColors.primaryPurple,
   },
   resultsContainer: {
     gap: 12,
