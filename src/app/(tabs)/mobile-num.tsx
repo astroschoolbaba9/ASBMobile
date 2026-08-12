@@ -65,11 +65,15 @@ export default function MobileNumScreen() {
 
   const handleConsultation = async () => {
     if (!name.trim()) {
-      showToast({ type: 'error', title: '✨ Name Required', message: 'Please enter your full name.' });
+      showToast({ type: 'error', title: '✨ Full Name Required', message: 'Please enter your full name to proceed.' });
+      return;
+    }
+    if (!dob || !dob.trim() || dob.trim().length < 8) {
+      showToast({ type: 'error', title: '📅 Date of Birth Required', message: 'Please enter your Date of Birth (DD-MM-YYYY) to proceed.' });
       return;
     }
     if (!mobile.trim() || mobile.trim().length < 10) {
-      showToast({ type: 'error', title: '📱 Mobile Number Needed', message: 'Please enter a valid 10-digit mobile phone number.' });
+      showToast({ type: 'error', title: '📱 Mobile Number Required', message: 'Please enter a valid 10-digit mobile phone number to proceed.' });
       return;
     }
 
@@ -195,7 +199,7 @@ export default function MobileNumScreen() {
 
       {/* Input Form Card */}
       <GlassCard style={styles.formCard}>
-        <Text style={styles.inputLabel}>FULL NAME</Text>
+        <Text style={styles.inputLabel}>FULL NAME *</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. John Doe"
@@ -204,7 +208,7 @@ export default function MobileNumScreen() {
           placeholderTextColor={ASBColors.textMuted}
         />
 
-        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY)</Text>
+        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY) *</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. 15-08-1995"
@@ -215,7 +219,7 @@ export default function MobileNumScreen() {
           maxLength={10}
         />
 
-        <Text style={styles.inputLabel}>MOBILE PHONE NUMBER (10 DIGITS)</Text>
+        <Text style={styles.inputLabel}>MOBILE PHONE NUMBER (10 DIGITS) *</Text>
         <TextInput
           style={styles.textInput}
           placeholder="9911500291"

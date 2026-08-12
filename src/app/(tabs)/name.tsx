@@ -123,7 +123,11 @@ export default function NameScreen() {
 
   const handleAnalyze = async () => {
     if (!name.trim()) {
-      showToast({ type: 'error', title: '✨ Full Name Needed', message: 'Please enter your full name to analyze your Chaldean name spelling.' });
+      showToast({ type: 'error', title: '✨ Full Name Required', message: 'Please enter your full name to analyze your Chaldean name spelling.' });
+      return;
+    }
+    if (!dob || !dob.trim() || dob.trim().length < 8) {
+      showToast({ type: 'error', title: '📅 Date of Birth Required', message: 'Please enter your Date of Birth (DD-MM-YYYY) to analyze your birth chart.' });
       return;
     }
     setLoading(true);
@@ -140,8 +144,12 @@ export default function NameScreen() {
       if (analyzeRes && analyzeRes.data) {
         const raw = analyzeRes.data;
         const letters = (raw.letters || []).map((l: any) => ({ char: l.letter || l.char, val: l.val || l.value }));
+        const mb = computeMulyankBhagyank(dob);
 
         setResult({
+          mulyank: raw.dob_numbers?.driver || mb.mulyank,
+          bhagyank: raw.dob_numbers?.destiny || mb.bhagyank,
+          dob_numbers: raw.dob_numbers || { driver: mb.mulyank, destiny: mb.bhagyank },
           name_breakdown: {
             compound: raw.compound_number || raw.compound || 24,
             root: raw.root_number || raw.root || 6,
@@ -167,6 +175,35 @@ export default function NameScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const computeMulyankBhagyank = (dobStr: string) => {
+    const digits = dobStr.replace(/\D/g, '');
+    if (!digits) return { mulyank: 2, bhagyank: 3 };
+
+    let dayDigits = '';
+    const parts = dobStr.trim().split(/[\/\-]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        dayDigits = parts[2];
+      } else {
+        dayDigits = parts[0];
+      }
+    } else {
+      dayDigits = digits.substring(0, 2);
+    }
+
+    let mulyank = dayDigits.split('').reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+    while (mulyank > 9) {
+      mulyank = String(mulyank).split('').reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+    }
+
+    let bhagyank = digits.split('').reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+    while (bhagyank > 9) {
+      bhagyank = String(bhagyank).split('').reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+    }
+
+    return { mulyank, bhagyank };
   };
 
   const computeLetterBreakdown = (inputName: string) => {
@@ -196,10 +233,10 @@ export default function NameScreen() {
     const withInitialM = `${firstName} M${lastName ? ' ' + lastName : ''}`;
 
     const candidates = [
-      { name: doubleLastChar, reason: `Doubling final letter "${lastChar}" elevates compound frequency to align with business success.` },
-      { name: doubleA, reason: 'Extending primary vowel "a" strengthens Sun leadership and public charisma.' },
-      { name: withInitialK, reason: 'Adding middle initial "K" (+2) shifts name to a Royal Chaldean Compound.' },
-      { name: withInitialM, reason: 'Adding middle initial "M" (+4) grounds the name in Jupiter executive wisdom.' },
+      { name: withInitialK, reason: 'Adding middle initial "K" (+2 Chaldean frequency) elevates the compound energy into a high-vibration Royal Chaldean harmony aligned with your Mulyank and Bhagyank.' },
+      { name: withInitialM, reason: 'Adding middle initial "M" (+4 Chaldean frequency) grounds the name in Jupiter wisdom, unlocking executive success, wealth attraction, and public recognition.' },
+      { name: doubleLastChar, reason: `Doubling final letter "${lastChar}" adjusts the overall name frequency for enhanced professional authority and confidence.` },
+      { name: doubleA, reason: 'Extending primary vowel "a" strengthens Sun leadership vibration and magnetizes positive public opportunities.' },
     ];
 
     const dynamicRecs = candidates.map((cand) => {
@@ -218,7 +255,7 @@ export default function NameScreen() {
         compound: candComp,
         root: candRoot,
         match: `${matchScore}%`,
-        reason: `${cand.reason} (Target Compound #${candComp}, Root #${candRoot})`,
+        reason: `${cand.reason} (Target Compound #${candComp})`,
       };
     });
 
@@ -227,6 +264,7 @@ export default function NameScreen() {
 
   const calculateMockName = (inputName: string) => {
     const prof = calculateNumerologyProfile(dob, inputName);
+    const mb = computeMulyankBhagyank(dob);
 
     let compound = 0;
     const letters = computeLetterBreakdown(inputName);
@@ -239,6 +277,9 @@ export default function NameScreen() {
     const isNameFavorable = [1, 3, 5, 6, 9].includes(root);
 
     setResult({
+      mulyank: mb.mulyank,
+      bhagyank: mb.bhagyank,
+      dob_numbers: { driver: mb.mulyank, destiny: mb.bhagyank },
       name_breakdown: {
         compound,
         root,
@@ -274,7 +315,7 @@ export default function NameScreen() {
 
       {/* Hero Form Card */}
       <GlassCard style={styles.formCard}>
-        <Text style={styles.inputLabel}>FULL NAME</Text>
+        <Text style={styles.inputLabel}>FULL NAME *</Text>
         <TextInput
           style={styles.textInput}
           placeholder="e.g. John Doe"
@@ -283,7 +324,7 @@ export default function NameScreen() {
           placeholderTextColor={ASBColors.textMuted}
         />
 
-        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY)</Text>
+        <Text style={styles.inputLabel}>DATE OF BIRTH (DD-MM-YYYY) *</Text>
         <TextInput
           style={styles.textInput}
           placeholder="29-10-2001"
@@ -381,14 +422,16 @@ export default function NameScreen() {
 
           <View style={styles.metricRow}>
             <View style={[styles.metricBox, ASBShadows.cardRest]}>
-              <Text style={styles.metricValue}>{result.name_breakdown?.compound}</Text>
-              <Text style={styles.metricLabel}>COMPOUND NUMBER</Text>
+              <Text style={styles.metricValue}>
+                {result.mulyank || result.dob_numbers?.driver || computeMulyankBhagyank(dob).mulyank}
+              </Text>
+              <Text style={styles.metricLabel}>MULYANK (DRIVER)</Text>
             </View>
             <View style={[styles.metricBox, ASBShadows.cardRest]}>
               <Text style={[styles.metricValue, { color: ASBColors.crimsonMagenta }]}>
-                {result.name_breakdown?.root}
+                {result.bhagyank || result.dob_numbers?.destiny || computeMulyankBhagyank(dob).bhagyank}
               </Text>
-              <Text style={styles.metricLabel}>ROOT NUMBER</Text>
+              <Text style={styles.metricLabel}>BHAGYANK (DESTINY)</Text>
             </View>
           </View>
 
@@ -410,7 +453,6 @@ export default function NameScreen() {
                 return (
                   <View key={num} style={[styles.gridCell, count > 0 && styles.gridCellActive]}>
                     <Text style={[styles.gridCellNum, count > 0 && styles.gridCellNumActive]}>{num}</Text>
-                    {count > 0 && <Text style={styles.gridCount}>({count})</Text>}
                   </View>
                 );
               })}
@@ -419,17 +461,6 @@ export default function NameScreen() {
               Missing Digits: {result.missing_numbers?.join(', ') || '4, 5, 8'}
             </Text>
           </GlassCard>
-
-          {/* Chaldean Compound Interpretation Card */}
-          {result.name_breakdown?.compound && CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound] && (
-            <GlassCard style={styles.meaningCard}>
-              <View style={styles.meaningHeaderRow}>
-                <Sparkles size={16} color={ASBColors.primaryPurple} />
-                <Text style={styles.meaningCardTitle}>CHALDEAN COMPOUND MEANING (#{result.name_breakdown.compound})</Text>
-              </View>
-              <Text style={styles.meaningText}>{CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound]}</Text>
-            </GlassCard>
-          )}
 
           {/* Priority Spelling Suggestions */}
           {recommendations.length > 0 && (
@@ -444,8 +475,7 @@ export default function NameScreen() {
                     </View>
                   </View>
                   <Text style={styles.recDetails}>
-                    Compound: <Text style={{ fontWeight: '700' }}>{rec.compound}</Text> | Root:{' '}
-                    <Text style={{ fontWeight: '700' }}>{rec.root}</Text>
+                    Compound: <Text style={{ fontWeight: '700' }}>{rec.compound}</Text>
                   </Text>
                   <Text style={styles.recReason}>{rec.reason}</Text>
 
@@ -460,6 +490,34 @@ export default function NameScreen() {
               ))}
             </View>
           )}
+
+          {/* Chaldean Compound Summary Card at the End */}
+          <Text style={[styles.sectionHeading, { marginTop: 16 }]}>CHALDEAN COMPOUND ANALYSIS</Text>
+          <GlassCard style={styles.meaningCard}>
+            <View style={styles.meaningHeaderRow}>
+              <Sparkles size={16} color={ASBColors.primaryPurple} />
+              <Text style={styles.meaningCardTitle}>
+                CHALDEAN COMPOUND NUMBER (#{result.name_breakdown?.compound || 16})
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: ASBColors.borderPurple }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 28, fontWeight: '800', color: ASBColors.darkPurpleNavy }}>
+                  {result.name_breakdown?.compound}
+                </Text>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: ASBColors.textMuted, marginTop: 2 }}>
+                  COMPOUND NUMBER
+                </Text>
+              </View>
+            </View>
+
+            {result.name_breakdown?.compound && CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound] && (
+              <Text style={styles.meaningText}>
+                {CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound]}
+              </Text>
+            )}
+          </GlassCard>
         </View>
       )}
 
