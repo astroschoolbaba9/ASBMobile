@@ -19,23 +19,34 @@ import { RefreshControl } from 'react-native';
 const parsePairDetails = (rawText: string) => {
   if (!rawText) return [];
   const parts = rawText.split('•').map(p => p.trim());
-  const parsed = [];
+  const parsed: any[] = [];
+  const seenPairs = new Set<string>();
+
   for (let p of parts) {
     if (!p) continue;
     const match = p.match(/^(\d+)\s*\[(Good|Bad)\]:\s*(.*)$/i);
+    let pair = '';
+    let isGood = false;
+    let meaning = '';
+
     if (match) {
-      parsed.push({
-        pair: match[1],
-        isGood: match[2].toLowerCase() === 'good',
-        meaning: match[3],
-      });
+      pair = match[1];
+      isGood = match[2].toLowerCase() === 'good';
+      meaning = match[3];
     } else {
-      const isGood = !p.toLowerCase().includes('bad') && !p.toLowerCase().includes('challenging');
-      parsed.push({
-        pair: p.slice(0, 2),
-        isGood,
-        meaning: p,
-      });
+      pair = p.slice(0, 2);
+      isGood = !p.toLowerCase().includes('bad') && !p.toLowerCase().includes('challenging');
+      meaning = p;
+    }
+
+    // Skip unlisted default fallback pairs (like 66, 99, 77) that have no specific backend definition
+    if (meaning.toLowerCase().includes('challenging combination')) {
+      continue;
+    }
+
+    if (pair && !seenPairs.has(pair)) {
+      seenPairs.add(pair);
+      parsed.push({ pair, isGood, meaning });
     }
   }
   return parsed;
@@ -163,11 +174,12 @@ export default function MobileNumScreen() {
       bhagyank = String(bhagyank).split('').reduce((s, d) => s + parseInt(d, 10), 0);
     }
 
-    // Find double digit pairs
+    // Find double digit bad pairs
     const badPairs: string[] = [];
+    const standardBad = ['13', '14', '16', '18', '23', '24', '26', '27', '28', '34', '35', '45', '46', '48', '58', '78', '79', '89'];
     for (let i = 0; i < cleanNum.length - 1; i++) {
       const pair = cleanNum.slice(i, i + 2);
-      if (['00', '44', '88', '99', '10', '54', '98'].includes(pair)) {
+      if (standardBad.includes(pair)) {
         badPairs.push(pair);
       }
     }
@@ -353,11 +365,10 @@ export default function MobileNumScreen() {
                     </Text>
                     <View style={[styles.pairTagBadge, { backgroundColor: item.isGood ? ASBColors.goodGreenBg : '#FEE2E2' }]}>
                       <Text style={[styles.pairTagText, { color: item.isGood ? ASBColors.goodGreen : ASBColors.errorRed }]}>
-                        {item.isGood ? 'AUSPICIOUS' : 'CHALLENGING'}
+                        {item.isGood ? 'GOOD' : 'CHALLENGING'}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.pairMeaningText}>{item.meaning}</Text>
                 </View>
               ))}
             </View>

@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
 import { User, Sparkles, ChevronDown, Check, Info } from 'lucide-react-native';
 import { ASBColors, ASBShadows, ASBRadius } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
@@ -68,9 +69,30 @@ const CHALDEAN_COMPOUND_MEANINGS: Record<number, string> = {
   51: 'High Military / Executive Power — Unstoppable ambition.',
 };
 
+const formatNameWords = (inputName: string, rawLetters: any[]) => {
+  const words = inputName.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [{ word: '', letters: rawLetters || [] }];
+
+  let letterIdx = 0;
+  return words.map((word) => {
+    const wordLetters: any[] = [];
+    for (let i = 0; i < word.length; i++) {
+      if (rawLetters && letterIdx < rawLetters.length) {
+        wordLetters.push(rawLetters[letterIdx]);
+        letterIdx++;
+      } else {
+        const char = word[i].toUpperCase();
+        wordLetters.push({ char, val: CHALDEAN_MAP[char] || 1 });
+      }
+    }
+    return { word, letters: wordLetters };
+  });
+};
+
 import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
 
 export default function NameScreen() {
+  const router = useRouter();
   const { user, updateProfile } = useAuth();
   const { showToast } = useToast();
   const [name, setName] = useState(user?.name || '');
@@ -242,33 +264,13 @@ export default function NameScreen() {
     const withInitialM = `${firstName} M${lastName ? ' ' + lastName : ''}`;
 
     const candidates = [
-      { name: withInitialK, reason: 'Adding middle initial "K" (+2 Chaldean frequency) elevates the compound energy into a high-vibration Royal Chaldean harmony aligned with your Mulyank and Bhagyank.' },
-      { name: withInitialM, reason: 'Adding middle initial "M" (+4 Chaldean frequency) grounds the name in Jupiter wisdom, unlocking executive success, wealth attraction, and public recognition.' },
-      { name: doubleLastChar, reason: `Doubling final letter "${lastChar}" adjusts the overall name frequency for enhanced professional authority and confidence.` },
-      { name: doubleA, reason: 'Extending primary vowel "a" strengthens Sun leadership vibration and magnetizes positive public opportunities.' },
+      { name: withInitialK },
+      { name: withInitialM },
+      { name: doubleLastChar },
+      { name: doubleA },
     ];
 
-    const dynamicRecs = candidates.map((cand) => {
-      let candComp = 0;
-      for (let char of cand.name.toUpperCase()) {
-        if (CHALDEAN_MAP[char]) candComp += CHALDEAN_MAP[char];
-      }
-      let candRoot = candComp;
-      while (candRoot > 9) {
-        candRoot = String(candRoot).split('').reduce((s, d) => s + parseInt(d, 10), 0);
-      }
-      const isHarmonious = [1, 3, 5, 6, 9].includes(candRoot);
-      const matchScore = isHarmonious ? 94 + (candComp % 6) : 88 + (candComp % 4);
-      return {
-        name: cand.name,
-        compound: candComp,
-        root: candRoot,
-        match: `${matchScore}%`,
-        reason: `${cand.reason} (Target Compound #${candComp})`,
-      };
-    });
-
-    setRecommendations(dynamicRecs);
+    setRecommendations(candidates);
   };
 
   const calculateMockName = (inputName: string) => {
@@ -412,16 +414,22 @@ export default function NameScreen() {
       {/* Results Dashboard */}
       {result && (
         <View style={styles.resultsContainer}>
-          {/* Letter by Letter Chaldean Value Grid */}
+          {/* Letter by Letter Chaldean Value Grid with Preserved Word Spaces */}
           {Array.isArray(result.name_breakdown?.letters) && result.name_breakdown.letters.length > 0 && (
             <GlassCard style={styles.letterBreakdownCard}>
               <Text style={styles.letterCardTitle}>CHALDEAN LETTER BREAKDOWN</Text>
-              <View style={styles.letterGridRow}>
-                {result.name_breakdown.letters.map((item: any, idx: number) => (
-                  <View key={idx} style={styles.letterChip}>
-                    <Text style={styles.letterChar}>{item.char}</Text>
-                    <View style={styles.letterValBadge}>
-                      <Text style={styles.letterValText}>{item.val}</Text>
+              <View style={styles.wordsWrapRow}>
+                {formatNameWords(name.trim(), result.name_breakdown.letters).map((wordObj: any, wIdx: number) => (
+                  <View key={wIdx} style={styles.wordBlock}>
+                    <View style={styles.letterGridRow}>
+                      {wordObj.letters.map((item: any, idx: number) => (
+                        <View key={idx} style={styles.letterChip}>
+                          <Text style={styles.letterChar}>{item.char}</Text>
+                          <View style={styles.letterValBadge}>
+                            <Text style={styles.letterValText}>{item.val}</Text>
+                          </View>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 ))}
@@ -447,9 +455,11 @@ export default function NameScreen() {
           {/* Strength Badge */}
           <GlassCard style={styles.strengthCard}>
             <Text style={styles.strengthLabel}>VIBRATION STRENGTH</Text>
-            <Text style={styles.strengthValue}>{result.name_breakdown?.strength || 'STRONG'}</Text>
-            <Text style={styles.targetText}>
-              Target Compound for {profession}: <Text style={{ fontWeight: '800' }}>{result.target || 32}</Text>
+            <Text style={[
+              styles.strengthValue,
+              { color: (result.name_breakdown?.strength === 'HIGH VIBRATION' || result.name_breakdown?.strength === 'HIGH') ? ASBColors.goodGreen : ASBColors.primaryPurple }
+            ]}>
+              {result.name_breakdown?.strength || 'HIGH VIBRATION'}
             </Text>
           </GlassCard>
 
@@ -471,62 +481,44 @@ export default function NameScreen() {
             </Text>
           </GlassCard>
 
-          {/* Priority Spelling Suggestions */}
-          {recommendations.length > 0 && (
+          {/* Priority Spelling Suggestions (Only shown when name needs correction and backend provides recommendations) */}
+          {recommendations.length > 0 && result.name_breakdown?.strength !== 'HIGH VIBRATION' && result.name_breakdown?.strength !== 'HIGH' && (
             <View style={{ marginTop: 12 }}>
               <Text style={styles.sectionHeading}>RECOMMENDED NAME SPELLINGS</Text>
-              {recommendations.map((rec, idx) => (
-                <GlassCard key={idx} variant="gold" style={styles.recCard}>
-                  <View style={styles.recHeader}>
-                    <Text style={styles.recName}>{rec.name}</Text>
-                    <View style={styles.matchBadge}>
-                      <Text style={styles.matchText}>{rec.match || '98% Match'}</Text>
+              {recommendations.map((rec, idx) => {
+                const suggestedName = typeof rec === 'string' ? rec : (rec.name || rec.spelling || '');
+                if (!suggestedName) return null;
+                return (
+                  <GlassCard key={idx} variant="gold" style={styles.recCard}>
+                    <View style={styles.recHeader}>
+                      <Text style={styles.recName}>{suggestedName}</Text>
                     </View>
-                  </View>
-                  <Text style={styles.recDetails}>
-                    Compound: <Text style={{ fontWeight: '700' }}>{rec.compound}</Text>
-                  </Text>
-                  <Text style={styles.recReason}>{rec.reason}</Text>
 
-                  <TouchableOpacity
-                    style={styles.applyBtn}
-                    onPress={() => handleApplySpelling(rec.name)}
-                  >
-                    <Sparkles size={12} color="#FFF" />
-                    <Text style={styles.applyBtnText}>Set as Active Profile Name</Text>
-                  </TouchableOpacity>
-                </GlassCard>
-              ))}
+                    <TouchableOpacity
+                      style={styles.applyBtn}
+                      onPress={() => handleApplySpelling(suggestedName)}
+                    >
+                      <Sparkles size={12} color="#FFF" />
+                      <Text style={styles.applyBtnText}>Set as Active Profile Name</Text>
+                    </TouchableOpacity>
+                  </GlassCard>
+                );
+              })}
             </View>
           )}
 
-          {/* Chaldean Compound Summary Card at the End */}
-          <Text style={[styles.sectionHeading, { marginTop: 16 }]}>CHALDEAN COMPOUND ANALYSIS</Text>
-          <GlassCard style={styles.meaningCard}>
-            <View style={styles.meaningHeaderRow}>
-              <Sparkles size={16} color={ASBColors.primaryPurple} />
-              <Text style={styles.meaningCardTitle}>
-                CHALDEAN COMPOUND NUMBER (#{result.name_breakdown?.compound || 16})
+          {/* Disclaimer */}
+          <TouchableOpacity 
+            onPress={() => router.push('/info/disclaimer' as any)}
+            style={{ marginTop: 20, alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 }}
+          >
+            <Text style={{ fontSize: 11, color: ASBColors.textMuted, textAlign: 'center', fontStyle: 'italic' }}>
+              🌸 Disclaimer: For personal guidance & self-growth.{' '}
+              <Text style={{ color: ASBColors.primaryPurple, fontWeight: '700', textDecorationLine: 'underline' }}>
+                Read Full Legal Disclaimer
               </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: ASBColors.borderPurple }}>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, fontWeight: '800', color: ASBColors.darkPurpleNavy }}>
-                  {result.name_breakdown?.compound}
-                </Text>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: ASBColors.textMuted, marginTop: 2 }}>
-                  COMPOUND NUMBER
-                </Text>
-              </View>
-            </View>
-
-            {result.name_breakdown?.compound && CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound] && (
-              <Text style={styles.meaningText}>
-                {CHALDEAN_COMPOUND_MEANINGS[result.name_breakdown.compound]}
-              </Text>
-            )}
-          </GlassCard>
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -657,6 +649,15 @@ const styles = StyleSheet.create({
     color: ASBColors.primaryPurple,
     letterSpacing: 1,
     marginBottom: 10,
+  },
+  wordsWrapRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    justifyContent: 'flex-start',
+  },
+  wordBlock: {
+    marginBottom: 4,
   },
   letterGridRow: {
     flexDirection: 'row',

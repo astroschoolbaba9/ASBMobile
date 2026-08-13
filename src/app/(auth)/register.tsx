@@ -105,19 +105,34 @@ export default function RegisterScreen() {
         <Text style={styles.inputLabel}>CONFIRM PASSWORD *</Text>
         <TextInput style={styles.input} value={confirmPwd} onChangeText={setConfirmPwd} secureTextEntry placeholder="Re-enter password" placeholderTextColor={ASBColors.textMuted} />
 
+        {/* Google Play Console Compliant Prominent Data Disclosure Box */}
+        <View style={styles.playDisclosureBox}>
+          <Text style={styles.playDisclosureText}>
+            🔒 <Text style={{ fontWeight: '700' }}>Google Play Privacy Disclosure:</Text> ASB collects your Name, Email, Phone Number, and Date of Birth solely to provide personalized numerology calculations and account security as detailed in our{' '}
+            <Text style={styles.link} onPress={() => router.push('/info/privacy' as any)}>
+              Privacy Policy
+            </Text>
+            . We never sell your personal data.
+          </Text>
+        </View>
+
         {/* Terms Checkbox */}
         <View style={styles.termsRow}>
           <TouchableOpacity onPress={() => setTermsAccepted(!termsAccepted)} style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
             {termsAccepted && <CheckCircle size={14} color="#FFFFFF" />}
           </TouchableOpacity>
           <Text style={styles.termsText}>
-            I agree to the{' '}
+            I am 18+ and agree to the{' '}
             <Text style={styles.link} onPress={() => router.push('/info/terms' as any)}>
               Terms of Service
-            </Text>{' '}
-            &{' '}
+            </Text>
+            ,{' '}
             <Text style={styles.link} onPress={() => router.push('/info/privacy' as any)}>
               Privacy Policy
+            </Text>{' '}
+            &{' '}
+            <Text style={styles.link} onPress={() => router.push('/info/disclaimer' as any)}>
+              Legal Disclaimer
             </Text>
           </Text>
         </View>
@@ -156,6 +171,8 @@ const styles = StyleSheet.create({
   strengthTrack: { flex: 1, height: 4, backgroundColor: '#F3E8FF', borderRadius: 2, overflow: 'hidden' },
   strengthFill: { height: '100%', borderRadius: 2 },
   strengthLabel: { fontSize: 11, fontWeight: '700' },
+  playDisclosureBox: { backgroundColor: 'rgba(139, 92, 246, 0.06)', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: ASBColors.borderPurple, marginTop: 14 },
+  playDisclosureText: { fontSize: 11, color: ASBColors.darkNavy, lineHeight: 16 },
   termsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: ASBColors.borderPurple, alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: ASBColors.primaryPurple, borderColor: ASBColors.primaryPurple },

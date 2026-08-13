@@ -363,6 +363,19 @@ export default function DashboardScreen() {
 
         {/* REAL-TIME VIBRATIONAL DECISION CLOCK SHIFTED TO BOTTOM */}
         <VibrationalClock />
+
+        {/* Disclaimer */}
+        <TouchableOpacity
+          onPress={() => router.push('/info/disclaimer' as any)}
+          style={{ marginTop: 24, marginBottom: 8, alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 }}
+        >
+          <Text style={{ fontSize: 11, color: ASBColors.textMuted, textAlign: 'center', fontStyle: 'italic' }}>
+            🌸 Disclaimer: For personal guidance & self-growth.{' '}
+            <Text style={{ color: ASBColors.primaryPurple, fontWeight: '700', textDecorationLine: 'underline' }}>
+              Read Full Legal Disclaimer
+            </Text>
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Daily 3D Tarot Card Draw Modal */}
