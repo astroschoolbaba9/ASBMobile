@@ -477,7 +477,9 @@ export default function NameScreen() {
               })}
             </View>
             <Text style={styles.missingText}>
-              Missing Digits: {result.missing_numbers?.join(', ') || '4, 5, 8'}
+              Missing Digits: {
+                ['1', '2', '3', '4', '5', '6', '7', '8', '9'].filter((num) => !(result.loshu_grid?.[num] > 0)).join(', ') || 'None (Full Harmony)'
+              }
             </Text>
           </GlassCard>
 

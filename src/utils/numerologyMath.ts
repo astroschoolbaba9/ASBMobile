@@ -82,11 +82,11 @@ export function calculateNumerologyProfile(dob: string, name: string = 'Seeker')
   const personalYear = reduceSingleDigit(pySum);
   const personalMonth = reduceSingleDigit(personalYear + currentMonth);
 
-  // 5. Lo Shu Grid (Digits 1-9 from DOB day, month, year)
+  // 5. Lo Shu Grid (Digits 1-9 from DOB day, month, year + Driver & Destiny numbers)
   const loshuGrid: Record<string, number> = {};
   for (let i = 1; i <= 9; i++) loshuGrid[String(i)] = 0;
 
-  const allDigits = `${day}${month}${year}`.replace(/\D/g, '');
+  const allDigits = `${day}${month}${year}${moolank}${bhagyank}`.replace(/\D/g, '');
   for (const char of allDigits) {
     if (char >= '1' && char <= '9') {
       loshuGrid[char] = (loshuGrid[char] || 0) + 1;
