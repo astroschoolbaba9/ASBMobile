@@ -199,10 +199,11 @@ export default function NameScreen() {
       if (recRes && recRes.data && Array.isArray(recRes.data.recommendations)) {
         setRecommendations(recRes.data.recommendations);
       } else {
-        calculateMockRecommendations(name.trim());
+        setRecommendations([]);
       }
     } catch (e) {
       calculateMockName(name.trim());
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
@@ -247,32 +248,6 @@ export default function NameScreen() {
     return letters;
   };
 
-  const calculateMockRecommendations = (inputName: string) => {
-    let compound = 0;
-    for (let char of inputName.toUpperCase()) {
-      if (CHALDEAN_MAP[char]) compound += CHALDEAN_MAP[char];
-    }
-
-    const words = inputName.trim().split(' ');
-    const firstName = words[0] || inputName;
-    const lastName = words.slice(1).join(' ');
-
-    const lastChar = firstName.slice(-1).toUpperCase();
-    const doubleLastChar = `${firstName}${lastChar}${lastName ? ' ' + lastName : ''}`;
-    const doubleA = `${firstName.slice(0, 1)}a${firstName.slice(1)}${lastName ? ' ' + lastName : ''}`;
-    const withInitialK = `${firstName} K${lastName ? ' ' + lastName : ''}`;
-    const withInitialM = `${firstName} M${lastName ? ' ' + lastName : ''}`;
-
-    const candidates = [
-      { name: withInitialK },
-      { name: withInitialM },
-      { name: doubleLastChar },
-      { name: doubleA },
-    ];
-
-    setRecommendations(candidates);
-  };
-
   const calculateMockName = (inputName: string) => {
     const prof = calculateNumerologyProfile(dob, inputName);
     const mb = computeMulyankBhagyank(dob);
@@ -302,8 +277,6 @@ export default function NameScreen() {
       loshu_grid: prof.loshuGrid,
       missing_numbers: prof.missingDigits,
     });
-
-    calculateMockRecommendations(inputName);
   };
 
   return (
