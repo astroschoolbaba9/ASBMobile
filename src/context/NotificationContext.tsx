@@ -162,30 +162,54 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const ExpoNotifications = require('expo-notifications');
         const ExpoConstants = require('expo-constants');
 
-        if (ExpoNotifications && typeof ExpoNotifications.requestPermissionsAsync === 'function') {
-          const { status } = await ExpoNotifications.requestPermissionsAsync();
-          if (status === 'granted' && typeof ExpoNotifications.getExpoPushTokenAsync === 'function') {
-            try {
-              const projectId =
-                ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId ||
-                ExpoConstants?.expoConfig?.extra?.eas?.projectId ||
-                'c36eca41-6b5d-431d-8339-f174e4e0c6d7';
-              const tokenRes = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
-              if (tokenRes?.data) {
-                setPushToken(tokenRes.data);
-                console.log('📱 EXPO PUSH TOKEN REGISTERED:', tokenRes.data);
-                try {
-                  await crystalApi.post('/api/auth/push-token', {
-                    pushToken: tokenRes.data,
-                    platform: Platform.OS,
-                  });
-                } catch (e) {
-                  console.warn('Failed to sync push token with backend:', e);
-                }
-              }
-            } catch (err) {}
+        if (ExpoNotifications) {
+          // Configure foreground notification presentation handler
+          if (typeof ExpoNotifications.setNotificationHandler === 'function') {
+            ExpoNotifications.setNotificationHandler({
+              handleNotification: async () => ({
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: true,
+              }),
+            });
           }
-          return status === 'granted';
+
+          // Configure Android Notification Channel with High Importance (Required for Android Lockscreen & Banner Push)
+          if (Platform.OS === 'android' && typeof ExpoNotifications.setNotificationChannelAsync === 'function') {
+            await ExpoNotifications.setNotificationChannelAsync('default', {
+              name: 'default',
+              importance: ExpoNotifications.AndroidImportance.MAX,
+              vibrationPattern: [0, 250, 250, 250],
+              lightColor: '#8B5CF6',
+              sound: 'default',
+            });
+          }
+
+          if (typeof ExpoNotifications.requestPermissionsAsync === 'function') {
+            const { status } = await ExpoNotifications.requestPermissionsAsync();
+            if (status === 'granted' && typeof ExpoNotifications.getExpoPushTokenAsync === 'function') {
+              try {
+                const projectId =
+                  ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId ||
+                  ExpoConstants?.expoConfig?.extra?.eas?.projectId ||
+                  'c36eca41-6b5d-431d-8339-f174e4e0c6d7';
+                const tokenRes = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
+                if (tokenRes?.data) {
+                  setPushToken(tokenRes.data);
+                  console.log('📱 EXPO PUSH TOKEN REGISTERED:', tokenRes.data);
+                  try {
+                    await crystalApi.post('/api/auth/push-token', {
+                      pushToken: tokenRes.data,
+                      platform: Platform.OS,
+                    });
+                  } catch (e) {
+                    console.warn('Failed to sync push token with backend:', e);
+                  }
+                }
+              } catch (err) {}
+            }
+            return status === 'granted';
+          }
         }
       } catch (e) {}
     }

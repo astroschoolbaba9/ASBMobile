@@ -129,6 +129,9 @@ export default function LoginModal() {
               maxLength={6}
               value={otp}
               onChangeText={setOtp}
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+              importantForAutofill="yes"
               placeholderTextColor={ASBColors.textMuted}
             />
           </>
