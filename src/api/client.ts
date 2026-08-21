@@ -48,13 +48,13 @@ export async function removeStoredToken(): Promise<void> {
   }
 }
 
-// DOB Date Format Helper: Ensures DOB is passed as DD/MM/YYYY for Python Backends
+// DOB Date Format Helper: Ensures DOB is passed as DD-MM-YYYY for Python Backends
 export function formatDobForApi(dob?: string): string {
   if (!dob) return '';
-  let clean = dob.replace(/-/g, '/').trim();
-  const parts = clean.split('/');
+  let clean = dob.replace(/\//g, '-').replace(/\./g, '-').trim();
+  const parts = clean.split('-');
   if (parts.length === 3 && parts[0].length === 4) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
   return clean;
 }
