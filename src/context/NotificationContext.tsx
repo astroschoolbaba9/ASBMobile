@@ -159,8 +159,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return perm === 'granted';
     } else {
       try {
-        const ExpoNotifications = require('expo-notifications');
         const ExpoConstants = require('expo-constants');
+        const isExpoGo =
+          ExpoConstants?.default?.executionEnvironment === 'storeClient' ||
+          ExpoConstants?.executionEnvironment === 'storeClient' ||
+          ExpoConstants?.default?.appOwnership === 'expo' ||
+          ExpoConstants?.appOwnership === 'expo';
+
+        if (isExpoGo) {
+          // Expo Go SDK 53 removed remote push notifications — bypass in Expo Go to silence error logs
+          return false;
+        }
+
+        const ExpoNotifications = require('expo-notifications');
 
         if (ExpoNotifications) {
           // Configure foreground notification presentation handler
@@ -187,26 +198,28 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
           if (typeof ExpoNotifications.requestPermissionsAsync === 'function') {
             const { status } = await ExpoNotifications.requestPermissionsAsync();
-            if (status === 'granted' && typeof ExpoNotifications.getExpoPushTokenAsync === 'function') {
-              try {
-                const projectId =
-                  ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId ||
-                  ExpoConstants?.expoConfig?.extra?.eas?.projectId ||
-                  'c36eca41-6b5d-431d-8339-f174e4e0c6d7';
-                const tokenRes = await ExpoNotifications.getExpoPushTokenAsync({ projectId });
-                if (tokenRes?.data) {
-                  setPushToken(tokenRes.data);
-                  console.log('📱 EXPO PUSH TOKEN REGISTERED:', tokenRes.data);
-                  try {
-                    await crystalApi.post('/api/auth/push-token', {
-                      pushToken: tokenRes.data,
-                      platform: Platform.OS,
-                    });
-                  } catch (e) {
-                    console.warn('Failed to sync push token with backend:', e);
+            if (status === 'granted') {
+              if (typeof ExpoNotifications.getExpoPushTokenAsync === 'function') {
+                try {
+                  const projectId =
+                    ExpoConstants?.default?.expoConfig?.extra?.eas?.projectId ||
+                    ExpoConstants?.expoConfig?.extra?.eas?.projectId ||
+                    'c36eca41-6b5d-431d-8339-f174e4e0c6d7';
+                  const tokenRes = await ExpoNotifications.getExpoPushTokenAsync({ projectId }).catch(() => null);
+                  if (tokenRes?.data) {
+                    setPushToken(tokenRes.data);
+                    console.log('📱 EXPO PUSH TOKEN REGISTERED:', tokenRes.data);
+                    try {
+                      await crystalApi.post('/api/auth/push-token', {
+                        pushToken: tokenRes.data,
+                        platform: Platform.OS,
+                      });
+                    } catch (e) {
+                      console.warn('Failed to sync push token with backend:', e);
+                    }
                   }
-                }
-              } catch (err) {}
+                } catch (err) {}
+              }
             }
             return status === 'granted';
           }

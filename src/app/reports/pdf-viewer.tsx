@@ -14,6 +14,8 @@ import { useToast } from '../../context/ToastContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
 
+import { getGuestProfile } from '../../utils/guestStorage';
+
 export default function PdfViewerScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
@@ -23,9 +25,18 @@ export default function PdfViewerScreen() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [guestDob, setGuestDob] = useState('');
+  const [guestName, setGuestName] = useState('');
 
-  const effectiveName = user?.name || 'Seeker';
-  const effectiveDob = user?.dob || '';
+  React.useEffect(() => {
+    getGuestProfile().then((g) => {
+      if (g.dob) setGuestDob(g.dob);
+      if (g.name) setGuestName(g.name);
+    });
+  }, []);
+
+  const effectiveName = user?.name || guestName || 'Seeker';
+  const effectiveDob = user?.dob || guestDob;
 
   // Calculate math profile for document previewer
   const profile = calculateNumerologyProfile(effectiveDob, effectiveName);

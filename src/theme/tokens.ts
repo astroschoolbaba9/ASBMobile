@@ -70,45 +70,45 @@ export const ASBFonts = {
   numerologyNumber: 'Cinzel_700Bold',              // Official Numerology Metric Font: Cinzel
 };
 
-import { Platform } from 'react-native';
+import { Platform, ViewStyle } from 'react-native';
 
 export const ASBShadows = {
-  cardRest: Platform.OS === 'web' ? ({
+  cardRest: (Platform.OS === 'web' ? ({
     boxShadow: '0px 4px 12px rgba(107, 91, 255, 0.08)',
-  } as any) : {
+  } as unknown as ViewStyle) : {
     shadowColor: '#6B5BFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
-  },
-  cardHover: Platform.OS === 'web' ? ({
+  }) as ViewStyle,
+  cardHover: (Platform.OS === 'web' ? ({
     boxShadow: '0px 10px 20px rgba(107, 91, 255, 0.18)',
-  } as any) : {
+  } as unknown as ViewStyle) : {
     shadowColor: '#6B5BFF',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.18,
     shadowRadius: 20,
     elevation: 8,
-  },
-  buttonPurple: Platform.OS === 'web' ? ({
+  }) as ViewStyle,
+  buttonPurple: (Platform.OS === 'web' ? ({
     boxShadow: '0px 8px 16px rgba(124, 58, 237, 0.35)',
-  } as any) : {
+  } as unknown as ViewStyle) : {
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
     elevation: 6,
-  },
-  buttonGold: Platform.OS === 'web' ? ({
+  }) as ViewStyle,
+  buttonGold: (Platform.OS === 'web' ? ({
     boxShadow: '0px 8px 16px rgba(124, 58, 237, 0.35)',
-  } as any) : {
+  } as unknown as ViewStyle) : {
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
     elevation: 6,
-  },
+  }) as ViewStyle,
 };
 
 export const ASBRadius = {

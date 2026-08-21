@@ -11,6 +11,6 @@ export const API_ENDPOINTS = {
   // Name Numerology Engine (name.asbreports.in / port 5000)
   NAME_BASE: 'https://name.asbreports.in',
   
-  // Mobile Numerology Engine (mobile.asbreports.in / port 5002)
-  MOBILE_BASE: 'https://mobile.asbreports.in',
+  // Mobile Numerology Engine (name.asbreports.in / port 5000)
+  MOBILE_BASE: 'https://name.asbreports.in',
 };

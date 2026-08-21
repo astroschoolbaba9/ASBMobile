@@ -17,7 +17,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, style, variant =
     return (
       <LinearGradient
         colors={['#F5F1FF', '#EBE4FF']}
-        style={[styles.base, styles.purpleBorder, ASBShadows.cardRest, style]}
+        style={[styles.base, styles.purpleBorder, ASBShadows.cardRest, style] as any}
       >
         {children}
       </LinearGradient>
@@ -28,7 +28,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, style, variant =
     return (
       <LinearGradient
         colors={['#1A1A3E', '#2A2A5E']}
-        style={[styles.base, styles.darkBorder, style]}
+        style={[styles.base, styles.darkBorder, style] as any}
       >
         {children}
       </LinearGradient>
@@ -36,7 +36,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, style, variant =
   }
 
   return (
-    <View style={[styles.base, styles.glassBg, styles.glassBorder, ASBShadows.cardRest, style]}>
+    <View style={[styles.base, styles.glassBg, styles.glassBorder, ASBShadows.cardRest, style] as any}>
       {children}
     </View>
   );

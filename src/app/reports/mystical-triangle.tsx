@@ -10,6 +10,8 @@ import { API_ENDPOINTS } from '../../api/config';
 import { formatDobForApi } from '../../api/client';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 
+import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
+
 export default function MysticalTriangleScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -18,6 +20,27 @@ export default function MysticalTriangleScreen() {
   const [dobInput, setDobInput] = useState(user?.dob || '');
   const [activeName, setActiveName] = useState(user?.name || '');
   const [activeDob, setActiveDob] = useState(user?.dob || '');
+
+  React.useEffect(() => {
+    if (user?.name) {
+      setNameInput(user.name);
+      setActiveName(user.name);
+    }
+    if (user?.dob) {
+      setDobInput(user.dob);
+      setActiveDob(user.dob);
+    }
+    getGuestProfile().then((g) => {
+      if (g.name) {
+        setNameInput((prev) => prev || g.name);
+        setActiveName((prev) => prev || g.name);
+      }
+      if (g.dob) {
+        setDobInput((prev) => prev || g.dob);
+        setActiveDob((prev) => prev || g.dob);
+      }
+    });
+  }, [user]);
 
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -40,6 +63,7 @@ export default function MysticalTriangleScreen() {
     if (!dobInput.trim()) {
       return;
     }
+    saveGuestProfile(nameInput.trim(), dobInput.trim());
     setActiveName(nameInput.trim());
     setActiveDob(dobInput.trim());
     setImageLoading(true);

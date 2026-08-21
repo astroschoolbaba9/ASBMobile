@@ -86,7 +86,7 @@ export function calculateNumerologyProfile(dob: string, name: string = 'Seeker')
   const loshuGrid: Record<string, number> = {};
   for (let i = 1; i <= 9; i++) loshuGrid[String(i)] = 0;
 
-  const allDigits = `${day}${month}${year}${moolank}${bhagyank}`.replace(/\D/g, '');
+  const allDigits = `${day}${month}${year}${moolank}${bhagyank}`.replace(/\D/g, '').replace(/0/g, '');
   for (const char of allDigits) {
     if (char >= '1' && char <= '9') {
       loshuGrid[char] = (loshuGrid[char] || 0) + 1;
@@ -178,7 +178,7 @@ export function calculateNumerologyProfile(dob: string, name: string = 'Seeker')
     const mVibe = reduceSingleDigit(personalYear + mNum);
     const score = Number((((mVibe * 1.1 + moolank + mNum * 0.3) % 2.5) + 7.4).toFixed(1));
     const tmpl = MONTH_FOCUS_TEMPLATES[mVibe] || MONTH_FOCUS_TEMPLATES[1];
-    
+
     // Unique lucky days calculated per month
     const day1 = mVibe;
     const day2 = (mVibe + 9) <= 31 ? (mVibe + 9) : (mVibe + 2);
@@ -259,13 +259,12 @@ export function calculateRelationshipCompatibility(
   else if (score >= 70) rating = 'GOOD COMPATIBILITY';
   else rating = 'REMEDIAL CARE NEEDED';
 
-  const emotional_harmony = `Dynamic Chaldean synastry analysis for ${name1} (Driver #${d1}, Destiny #${b1}) and ${name2} (Driver #${d2}, Destiny #${b2}). Energy frequency correlation yields a ${score}% resonance score. ${
-    comp1.friends.includes(d2)
+  const emotional_harmony = `Dynamic Chaldean synastry analysis for ${name1} (Driver #${d1}, Destiny #${b1}) and ${name2} (Driver #${d2}, Destiny #${b2}). Energy frequency correlation yields a ${score}% resonance score. ${comp1.friends.includes(d2)
       ? 'Driver numbers share a highly supportive planetary relationship, fostering deep mutual trust and fluid communication.'
       : comp1.enemy.includes(d2)
-      ? 'Driver vibrations show opposing energetic poles. Implementing remedial color alignment and gemstone grounding balances relationship friction.'
-      : 'Vibrational alignment is steady, benefiting from shared goals and mutual respect.'
-  }`;
+        ? 'Driver vibrations show opposing energetic poles. Implementing remedial color alignment and gemstone grounding balances relationship friction.'
+        : 'Vibrational alignment is steady, benefiting from shared goals and mutual respect.'
+    }`;
 
   const marriage_outlook = `Long-term commitment window: Favorable planetary transits occur when Personal Years align with Driver #${d1} and #${d2}. Best timing for relationship milestones: Personal Months ${p1.personalMonth} and ${p2.personalMonth}.`;
 
@@ -276,6 +275,49 @@ export function calculateRelationshipCompatibility(
     marriage_outlook,
     p1Driver: d1,
     p2Driver: d2,
+  };
+}
+
+export function getDynamicNumberClassification(moolank: number) {
+  const m = ((moolank - 1) % 9) + 1;
+  const friendlyGroups = [
+    [1, 2, 3], [4, 5, 6], [7, 8, 9],
+    [1, 4, 7], [2, 5, 8], [3, 6, 9],
+  ];
+
+  const enemyMap: Record<number, number[]> = {
+    1: [8],
+    8: [1],
+    3: [6],
+    6: [3],
+  };
+
+  const friendlySet = new Set<number>();
+  for (const group of friendlyGroups) {
+    if (group.includes(m)) {
+      for (const num of group) {
+        if (num !== m) friendlySet.add(num);
+      }
+    }
+  }
+
+  const enemies = enemyMap[m] || [];
+  for (const e of enemies) {
+    friendlySet.delete(e);
+  }
+
+  const friendlies = Array.from(friendlySet).sort((a, b) => a - b);
+  const neutrals: number[] = [];
+  for (let i = 1; i <= 9; i++) {
+    if (i !== m && !friendlies.includes(i) && !enemies.includes(i)) {
+      neutrals.push(i);
+    }
+  }
+
+  return {
+    friendly: friendlies,
+    enemy: enemies,
+    neutral: neutrals,
   };
 }
 

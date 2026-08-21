@@ -13,47 +13,39 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
 import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
+import { getDynamicNumberClassification } from '../../utils/numerologyMath';
 
 import { RefreshControl } from 'react-native';
 
-const parsePairDetails = (rawText: string) => {
-  if (!rawText) return [];
-  const parts = rawText.split('•').map(p => p.trim());
-  const parsed: any[] = [];
-  const seenPairs = new Set<string>();
+const extractMobilePairs = (mobileNumber: string) => {
+  const clean = mobileNumber.replace(/\D/g, '').replace(/0/g, '');
+  const standardBad = new Set(['13', '14', '16', '18', '23', '24', '26', '27', '28', '34', '35', '45', '46', '48', '58', '78', '79', '89']);
+  const pairMap = new Map<string, { pair: string; isGood: boolean; meaning: string; count: number }>();
 
-  for (let p of parts) {
-    if (!p) continue;
-    const match = p.match(/^(\d+)\s*\[(Good|Bad)\]:\s*(.*)$/i);
-    let pair = '';
-    let isGood = false;
-    let meaning = '';
-
-    if (match) {
-      pair = match[1];
-      isGood = match[2].toLowerCase() === 'good';
-      meaning = match[3];
-    } else {
-      pair = p.slice(0, 2);
-      isGood = !p.toLowerCase().includes('bad') && !p.toLowerCase().includes('challenging');
-      meaning = p;
-    }
-
-    // Skip unlisted default fallback pairs (like 66, 99, 77) that have no specific backend definition
-    if (meaning.toLowerCase().includes('challenging combination')) {
+  for (let i = 0; i < clean.length - 1; i++) {
+    const pair = clean.slice(i, i + 2);
+    // Neglect double numbers (11, 22, 33, 44, 55, 66, 77, 88, 99)
+    if (pair.length === 2 && pair[0] === pair[1]) {
       continue;
     }
 
-    if (pair && !seenPairs.has(pair)) {
-      seenPairs.add(pair);
-      parsed.push({ pair, isGood, meaning });
+    const isBad = standardBad.has(pair);
+    if (pairMap.has(pair)) {
+      pairMap.get(pair)!.count += 1;
+    } else {
+      pairMap.set(pair, {
+        pair,
+        isGood: !isBad,
+        meaning: isBad ? 'Challenging Frequency' : 'Favorable Vibration',
+        count: 1,
+      });
     }
   }
-  return parsed;
+  return Array.from(pairMap.values());
 };
 
 export default function MobileNumScreen() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { showToast } = useToast();
   const [name, setName] = useState(user?.name || '');
   const [dob, setDob] = useState(user?.dob || '');
@@ -96,6 +88,7 @@ export default function MobileNumScreen() {
     }
 
     saveGuestProfile(name.trim(), dob.trim());
+    updateProfile({ name: name.trim(), dob: dob.trim() });
     setLoading(true);
     setResult(null);
 
@@ -111,12 +104,17 @@ export default function MobileNumScreen() {
 
       if (res && res.data) {
         const raw = res.data;
-        const pairArr = Array.isArray(raw.pair_analysis) ? raw.pair_analysis : [];
-        const badPairs = pairArr.filter((p: any) => p.type === 'Bad' || p.type === 'Aggressive').map((p: any) => `${p.pair} (${p.meaning || 'Conflict'})`);
-        const goodPairs = pairArr.filter((p: any) => p.type === 'Good' || p.type === 'Favorable').map((p: any) => `${p.pair} (${p.meaning || 'Harmony'})`);
-        const badCount = badPairs.length;
-        const calculatedScore = Math.max(45, Math.min(95, 95 - badCount * 6));
-        const verdict = raw.final_result || (badCount > 4 ? 'CHALLENGING VIBRATION' : badCount > 2 ? 'MODERATE HARMONY' : 'HIGH HARMONIOUS VIBRATION');
+        const parsedPairs = extractMobilePairs(mobile);
+        const totalParsed = parsedPairs.reduce((sum: number, p: any) => sum + (p.count || 1), 0) || 1;
+        const goodParsed = parsedPairs.filter((p: any) => p.isGood).reduce((sum: number, p: any) => sum + (p.count || 1), 0);
+        const badParsed = totalParsed - goodParsed;
+        const badPairs = parsedPairs.filter((p: any) => !p.isGood).map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} (${p.meaning})`);
+        const detailsText = parsedPairs.map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} [${p.isGood ? 'Good' : 'Bad'}]: ${p.meaning}`).join(' • ');
+
+        // Pure dynamic percentage matching displayed chips 100%
+        const calculatedScore = totalParsed > 0 ? Math.round((goodParsed / totalParsed) * 100) : 100;
+
+        const verdict = raw.final_result || (calculatedScore >= 90 ? 'HARMONIOUS VIBRATION' : calculatedScore >= 70 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION');
 
         const remediesList: string[] = [];
         if (raw.remedies?.color_info) {
@@ -129,7 +127,9 @@ export default function MobileNumScreen() {
           remediesList.push(`Auspicious Directions: ${raw.remedies.directions.join(', ')}`);
         }
 
-        const detailsText = pairArr.map((p: any) => `${p.pair} [${p.type}]: ${p.meaning}`).join(' • ') || 'Digit sequence analyzed.';
+        const dynamicInterpretation = goodParsed >= badParsed
+          ? `Your mobile number generates a Harmonious Vibration (Score: ${calculatedScore}%). A majority (${goodParsed} of ${totalParsed}) of your digit combinations are favorable, supporting positive communication, personal vitality, and auspicious wealth flow.`
+          : `Your mobile number generates a Challenging Vibration (Score: ${calculatedScore}%). A majority (${badParsed} of ${totalParsed}) of digit combinations show potential conflict. Applying recommended remedies is advised to harmonize vibrations.`;
 
         setResult({
           ...raw,
@@ -140,19 +140,20 @@ export default function MobileNumScreen() {
             bad_combinations: badPairs,
             pair_details: detailsText,
           },
-          remedies: remediesList.length > 0 ? remediesList : ['Keep phone screen clean', 'Avoid charging phone near bed headrest'],
+          interpretation: dynamicInterpretation,
+          remedies: remediesList.length > 0 ? remediesList : ['Keep phone wallpaper in favorable colors', 'Avoid keeping phone under pillow while sleeping'],
         });
       } else {
-        calculateMockMobile();
+        calculateLocalMobileResult();
       }
     } catch (e) {
-      calculateMockMobile();
+      calculateLocalMobileResult();
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateMockMobile = () => {
+  const calculateLocalMobileResult = () => {
     let digitSum = 0;
     const cleanNum = mobile.replace(/\D/g, '');
     for (let char of cleanNum) {
@@ -167,25 +168,43 @@ export default function MobileNumScreen() {
     const dobDigits = dob.replace(/\D/g, '');
     const dayDigits = dobDigits.slice(0, 2);
     const moolankRaw = dayDigits.split('').reduce((s, d) => s + parseInt(d, 10), 0);
-    const moolank = moolankRaw > 9 ? (moolankRaw > 9 ? String(moolankRaw).split('').reduce((s, d) => s + parseInt(d, 10), 0) : moolankRaw) : moolankRaw;
+    let moolank = moolankRaw;
+    while (moolank > 9) {
+      moolank = String(moolank).split('').reduce((s, d) => s + parseInt(d, 10), 0);
+    }
     const bhagyankRaw = dobDigits.split('').reduce((s, d) => s + parseInt(d, 10), 0);
     let bhagyank = bhagyankRaw;
     while (bhagyank > 9) {
       bhagyank = String(bhagyank).split('').reduce((s, d) => s + parseInt(d, 10), 0);
     }
 
-    // Find double digit bad pairs
+    // Zeros are non-counting: extract pairs from non-zero sequence
+    const nonZeroNum = cleanNum.replace(/0/g, '');
     const badPairs: string[] = [];
     const standardBad = ['13', '14', '16', '18', '23', '24', '26', '27', '28', '34', '35', '45', '46', '48', '58', '78', '79', '89'];
-    for (let i = 0; i < cleanNum.length - 1; i++) {
-      const pair = cleanNum.slice(i, i + 2);
+    const pairDetailsList: string[] = [];
+    let goodCount = 0;
+
+    for (let i = 0; i < nonZeroNum.length - 1; i++) {
+      const pair = nonZeroNum.slice(i, i + 2);
+      // Neglect double numbers (11, 22, 33, 44, 55, 66, 77, 88, 99)
+      if (pair.length === 2 && pair[0] === pair[1]) {
+        continue;
+      }
+
       if (standardBad.includes(pair)) {
         badPairs.push(pair);
+        pairDetailsList.push(`${pair} [Bad]: Challenging frequency`);
+      } else {
+        goodCount++;
+        pairDetailsList.push(`${pair} [Good]: Favorable vibration`);
       }
     }
 
-    const score = Math.max(50, 92 - badPairs.length * 10);
-    const verdict = score > 80 ? 'HARMONIOUS VIBRATION' : score > 65 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION';
+    const totalPairs = Math.max(1, pairDetailsList.length);
+    const score = Math.round((goodCount / totalPairs) * 100);
+    const verdict = score >= 90 ? 'HARMONIOUS VIBRATION' : score >= 70 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION';
+    const pairDetailsStr = pairDetailsList.join(' • ');
 
     setResult({
       client_info: { name, dob, mobile_number: mobile },
@@ -201,11 +220,13 @@ export default function MobileNumScreen() {
         score,
         verdict,
         bad_combinations: badPairs,
-        pair_details: `Mobile digit total sums to Power Number ${powerNumber}. Your Soul Number ${moolank} & Destiny Number ${bhagyank} interact with this frequency.`,
+        pair_details: pairDetailsStr,
       },
-      interpretation: `Your mobile number sums to Power Number ${powerNumber}. It generates a ${verdict.toLowerCase()} for daily professional communications and wealth flow.`,
+      interpretation: goodCount >= badPairs.length
+        ? `Your mobile number sums to Power Number #${powerNumber} and generates a Harmonious Vibration (Score: ${score}%). A majority (${goodCount} of ${totalPairs}) of non-zero digit combinations are favorable, promoting clear communications and wealth flow.`
+        : `Your mobile number sums to Power Number #${powerNumber} and generates a Challenging Vibration (Score: ${score}%). A majority (${badPairs.length} of ${totalPairs}) of digit combinations present potential conflicts. Applying remedies is advised.`,
       remedies: [
-        `Keep phone wallpaper in favorable color for Power Number ${powerNumber}`,
+        `Keep phone wallpaper in favorable colors for Power Number ${powerNumber}`,
         'Avoid keeping phone under pillow while sleeping',
         'Keep phone screen clean to preserve positive vibrations',
       ],
@@ -346,7 +367,7 @@ export default function MobileNumScreen() {
 
             {/* Structured Decorative Pair Chips */}
             <View style={styles.pairChipsGrid}>
-              {parsePairDetails(result.pair_analysis?.pair_details || '').map((item: any, idx: number) => (
+              {extractMobilePairs(mobile || result?.client_info?.mobile_number || '').map((item: any, idx: number) => (
                 <View
                   key={idx}
                   style={[
@@ -361,7 +382,7 @@ export default function MobileNumScreen() {
                       <AlertTriangle size={14} color={ASBColors.errorRed} />
                     )}
                     <Text style={[styles.pairNumberText, { color: item.isGood ? ASBColors.goodGreen : ASBColors.errorRed }]}>
-                      Pair #{item.pair}
+                      Pair #{item.pair}{item.count > 1 ? ` (x${item.count})` : ''}
                     </Text>
                     <View style={[styles.pairTagBadge, { backgroundColor: item.isGood ? ASBColors.goodGreenBg : '#FEE2E2' }]}>
                       <Text style={[styles.pairTagText, { color: item.isGood ? ASBColors.goodGreen : ASBColors.errorRed }]}>

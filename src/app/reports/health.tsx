@@ -12,6 +12,8 @@ import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
 
+import { getGuestProfile } from '../../utils/guestStorage';
+
 function reduceSingleDigit(num: number): number {
   while (num > 9) {
     num = String(num)
@@ -24,8 +26,18 @@ function reduceSingleDigit(num: number): number {
 export default function HealthReportScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const effectiveDob = user?.dob || '';
-  const effectiveName = user?.name || '';
+  const [guestDob, setGuestDob] = useState('');
+  const [guestName, setGuestName] = useState('');
+
+  useEffect(() => {
+    getGuestProfile().then((g) => {
+      if (g.dob) setGuestDob(g.dob);
+      if (g.name) setGuestName(g.name);
+    });
+  }, []);
+
+  const effectiveDob = user?.dob || guestDob;
+  const effectiveName = user?.name || guestName || 'Seeker';
   const [activeCycleTab, setActiveCycleTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
 
   const [loading, setLoading] = useState(false);

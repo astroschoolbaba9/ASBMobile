@@ -12,6 +12,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
 
+import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
+
 interface DobRequiredGateProps {
   children: React.ReactNode;
   /** Title shown on the gate screen, e.g. "Profession Report" */
@@ -28,7 +30,23 @@ export function DobRequiredGate({ children, reportTitle = 'Report' }: DobRequire
   const [guestUnlocked, setGuestUnlocked] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const hasDob = !!((isAuthenticated && user?.dob && user.dob.length >= 8) || guestUnlocked);
+  React.useEffect(() => {
+    if (user?.name) setInputName(user.name);
+    if (user?.dob) setInputDob(user.dob);
+    if (user?.dob && user.dob.length >= 8) {
+      setGuestUnlocked(true);
+    } else {
+      getGuestProfile().then((g) => {
+        if (g.name && !inputName) setInputName(g.name);
+        if (g.dob && !inputDob) setInputDob(g.dob);
+        if (g.dob && g.dob.length >= 8) {
+          setGuestUnlocked(true);
+        }
+      });
+    }
+  }, [user]);
+
+  const hasDob = !!((isAuthenticated && user?.dob && user.dob.length >= 8) || guestUnlocked || (inputDob && inputDob.length >= 8));
 
   if (hasDob) {
     return <>{children}</>;
@@ -59,6 +77,7 @@ export function DobRequiredGate({ children, reportTitle = 'Report' }: DobRequire
 
     setSaving(true);
     try {
+      await saveGuestProfile(inputName.trim(), inputDob.trim());
       await updateProfile({ name: inputName.trim(), dob: inputDob.trim() });
       setGuestUnlocked(true);
       showToast({
@@ -68,6 +87,7 @@ export function DobRequiredGate({ children, reportTitle = 'Report' }: DobRequire
       });
     } catch (e) {
       console.warn('Profile update error:', e);
+      await saveGuestProfile(inputName.trim(), inputDob.trim());
       setGuestUnlocked(true);
     } finally {
       setSaving(false);

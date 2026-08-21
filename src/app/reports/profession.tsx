@@ -12,11 +12,23 @@ import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
 
+import { getGuestProfile } from '../../utils/guestStorage';
+
 export default function ProfessionReportScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const effectiveDob = user?.dob || '';
-  const effectiveName = user?.name || '';
+  const [guestDob, setGuestDob] = useState('');
+  const [guestName, setGuestName] = useState('');
+
+  useEffect(() => {
+    getGuestProfile().then((g) => {
+      if (g.dob) setGuestDob(g.dob);
+      if (g.name) setGuestName(g.name);
+    });
+  }, []);
+
+  const effectiveDob = user?.dob || guestDob;
+  const effectiveName = user?.name || guestName || 'Seeker';
 
   const [loading, setLoading] = useState(false);
   const [apiData, setApiData] = useState<any>(null);

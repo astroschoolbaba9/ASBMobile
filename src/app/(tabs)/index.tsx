@@ -235,12 +235,12 @@ export default function DashboardScreen() {
                 {/* Soul & Destiny Number Pill Badges */}
                 <View style={styles.soulBadgeContainer}>
                   <View style={styles.soulBadgeCircle}>
-                    <Text style={styles.soulBadgeValue}>{profile.moolank}</Text>
+                    <Text style={styles.soulBadgeValue}>{effectiveDob ? profile.moolank : '--'}</Text>
                     <Text style={styles.soulBadgeLabel}>Soul</Text>
                   </View>
 
                   <View style={[styles.soulBadgeCircle, { backgroundColor: '#FDF4FF' }]}>
-                    <Text style={[styles.soulBadgeValue, { color: ASBColors.crimsonMagenta }]}>{profile.bhagyank}</Text>
+                    <Text style={[styles.soulBadgeValue, { color: ASBColors.crimsonMagenta }]}>{effectiveDob ? profile.bhagyank : '--'}</Text>
                     <Text style={styles.soulBadgeLabel}>Path</Text>
                   </View>
                 </View>
@@ -250,17 +250,17 @@ export default function DashboardScreen() {
               <View style={styles.compactGuidanceBar}>
                 <View style={styles.compactGuidanceItem}>
                   <Text style={styles.compactGuidanceLabel}>LUCKY</Text>
-                  <Text style={styles.compactGuidanceVal}>{profile.moolank} & {profile.bhagyank}</Text>
+                  <Text style={styles.compactGuidanceVal}>{effectiveDob ? `${profile.moolank} & ${profile.bhagyank}` : '--'}</Text>
                 </View>
                 <View style={styles.compactDivider} />
                 <View style={styles.compactGuidanceItem}>
                   <Text style={styles.compactGuidanceLabel}>COLOR</Text>
-                  <Text style={styles.compactGuidanceVal}>{getLuckyColor(profile.moolank)}</Text>
+                  <Text style={styles.compactGuidanceVal}>{effectiveDob ? getLuckyColor(profile.moolank) : '--'}</Text>
                 </View>
                 <View style={styles.compactDivider} />
                 <View style={styles.compactGuidanceItem}>
                   <Text style={styles.compactGuidanceLabel}>YEAR</Text>
-                  <Text style={styles.compactGuidanceVal}>Year #{profile.personalYear}</Text>
+                  <Text style={styles.compactGuidanceVal}>{effectiveDob ? `Year #${profile.personalYear}` : '--'}</Text>
                 </View>
               </View>
 

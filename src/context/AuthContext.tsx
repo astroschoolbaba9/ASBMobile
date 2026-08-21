@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as Linking from 'expo-linking';
 import { crystalApi, getStoredToken, saveStoredToken, removeStoredToken } from '../api/client';
+import { getGuestProfile, saveGuestProfile } from '../utils/guestStorage';
 
 export interface UserProfile {
   _id: string;
@@ -44,8 +45,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchMe = useCallback(async () => {
     const storedToken = await getStoredToken();
+    const guest = await getGuestProfile();
     if (!storedToken) {
-      setUser(null);
+      if (guest.name || guest.dob) {
+        setUser({ _id: 'guest', name: guest.name, dob: guest.dob });
+      } else {
+        setUser(null);
+      }
       setTokenState(null);
       setLoading(false);
       return;
@@ -54,7 +60,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTokenState(storedToken);
       const res = await crystalApi.get('/api/auth/me');
       if (res.data?.success && res.data?.user) {
-        setUser(res.data.user);
+        const u = res.data.user;
+        const mergedUser = {
+          ...u,
+          name: u.name || guest.name || '',
+          dob: u.dob || guest.dob || '',
+        };
+        setUser(mergedUser);
+        if (mergedUser.name || mergedUser.dob) {
+          await saveGuestProfile(mergedUser.name, mergedUser.dob);
+        }
       } else {
         await removeStoredToken();
         setUser(null);
@@ -172,7 +187,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateDob = async (newDob: string) => {
     if (!newDob) return;
     try {
-      setUser((prev) => (prev ? { ...prev, dob: newDob } : null));
+      setUser((prev) => (prev ? { ...prev, dob: newDob } : { _id: 'guest', dob: newDob }));
+      await saveGuestProfile(user?.name, newDob);
       if (token) {
         await crystalApi.post('/api/auth/complete-profile', { dob: newDob });
       }
@@ -183,7 +199,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateProfile = async (data: { name?: string; dob?: string; email?: string; phone?: string; gender?: string }) => {
     try {
-      setUser((prev) => (prev ? { ...prev, ...data } : null));
+      setUser((prev) => (prev ? { ...prev, ...data } : { _id: 'guest', ...data }));
+      if (data.name || data.dob) {
+        await saveGuestProfile(data.name || user?.name, data.dob || user?.dob);
+      }
       if (token) {
         await crystalApi.post('/api/auth/complete-profile', data);
       }

@@ -12,6 +12,8 @@ import { useAuth } from '../../context/AuthContext';
 import { calculateNumerologyProfile } from '../../utils/numerologyMath';
 import { reportApi, formatDobForApi } from '../../api/client';
 
+import { getGuestProfile } from '../../utils/guestStorage';
+
 function reduceSingleDigit(num: number): number {
   while (num > 9) {
     num = String(num)
@@ -26,9 +28,18 @@ export default function TimeCyclesScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const [selectedMonth, setSelectedMonth] = useState<any>(null);
+  const [guestDob, setGuestDob] = useState('');
+  const [guestName, setGuestName] = useState('');
 
-  const effectiveDob = user?.dob || '';
-  const effectiveName = user?.name || 'Seeker';
+  useEffect(() => {
+    getGuestProfile().then((g) => {
+      if (g.dob) setGuestDob(g.dob);
+      if (g.name) setGuestName(g.name);
+    });
+  }, []);
+
+  const effectiveDob = user?.dob || guestDob;
+  const effectiveName = user?.name || guestName || 'Seeker';
   const profile = calculateNumerologyProfile(effectiveDob, effectiveName);
 
   const [loading, setLoading] = useState(false);

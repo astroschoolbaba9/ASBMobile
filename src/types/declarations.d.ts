@@ -54,4 +54,5 @@ declare module 'lucide-react-native' {
   export const LogOut: Icon;
   export const CreditCard: Icon;
   export const Eye: Icon;
+  export const Copy: Icon;
 }

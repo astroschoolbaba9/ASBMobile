@@ -36,14 +36,13 @@
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
+    "updates": {
+      "enabled": false,
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "c36eca41-6b5d-431d-8339-f174e4e0c6d7"
-      }
+      "router": {}
     }
   }
 }
