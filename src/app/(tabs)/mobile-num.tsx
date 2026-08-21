@@ -341,7 +341,7 @@ export default function MobileNumScreen() {
 
             {/* Structured Decorative Pair Chips */}
             <View style={styles.pairChipsGrid}>
-              {extractMobilePairs(mobile || result?.client_info?.mobile_number || '').map((item: any, idx: number) => {
+              {(result?.pairs || result?.pair_analysis?.pairs || extractMobilePairs(mobile || result?.client_info?.mobile_number || '')).map((item: any, idx: number) => {
                 const isGood = item.type === 'Good';
                 const isBad = item.type === 'Bad';
                 const tagBg = isGood ? ASBColors.goodGreenBg : isBad ? '#FEE2E2' : '#FEF3C7';
