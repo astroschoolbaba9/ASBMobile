@@ -278,46 +278,112 @@ export function calculateRelationshipCompatibility(
   };
 }
 
+export const NUMBER_RELATIONS: Record<number, { friendly: number[]; enemy: number[]; neutral: number[] }> = {
+  1: { friendly: [1, 2, 3, 5, 9], enemy: [8],          neutral: [4, 6, 7] },
+  2: { friendly: [1, 3, 5],       enemy: [4, 8, 9],    neutral: [2, 6, 7] },
+  3: { friendly: [1, 2, 3, 5],    enemy: [6],          neutral: [4, 7, 8, 9] },
+  4: { friendly: [1, 6, 7],       enemy: [2, 4, 8, 9], neutral: [3, 5] },
+  5: { friendly: [1, 2, 3, 5, 6], enemy: [],           neutral: [4, 7, 8, 9] },
+  6: { friendly: [4, 5, 6, 7],    enemy: [3],          neutral: [1, 2, 8, 9] },
+  7: { friendly: [1, 4, 5, 6],    enemy: [],           neutral: [2, 3, 7, 8, 9] },
+  8: { friendly: [3, 5, 6],       enemy: [1, 2, 4, 8], neutral: [7, 9] },
+  9: { friendly: [1, 3, 5],       enemy: [2, 4],       neutral: [6, 7, 8, 9] },
+};
+
+export const CRYSTAL_REMEDIES: Record<number, string> = {
+  1: 'Sun stone',
+  2: 'Moonstone',
+  3: 'Citrine',
+  4: 'Tiger Eye',
+  5: 'Green Aventurine',
+  6: 'Pyrite',
+  7: 'Smoky quartz',
+  8: 'Amethyst',
+  9: 'Red Jasper',
+};
+
+export const PAIR_DATA: Record<string, { type: 'Good' | 'Bad' | 'Neutral'; meaning: string }> = {
+  // Good Pairs
+  '12': { type: 'Good', meaning: 'Savings & wealth accumulation' },
+  '31': { type: 'Good', meaning: 'Good in administration, health, marriage life' },
+  '15': { type: 'Good', meaning: 'Success in exams, good marriage, overcoming challenges' },
+  '51': { type: 'Good', meaning: 'Success in exams, good marriage, overcoming challenges' },
+  '17': { type: 'Good', meaning: 'Leadership quality, government contracts & authority' },
+  '71': { type: 'Good', meaning: 'Leadership quality, government contracts & authority' },
+  '19': { type: 'Good', meaning: 'Unexpected money (stock market, consultancy, online ventures)' },
+  '91': { type: 'Good', meaning: 'Unexpected money (stock market, consultancy, online ventures)' },
+  '25': { type: 'Good', meaning: 'Orator power, occult science interest, magical influence' },
+  '52': { type: 'Good', meaning: 'Orator power, occult science interest, magical influence' },
+  '29': { type: 'Good', meaning: 'Self-earned money & financial independence' },
+  '92': { type: 'Good', meaning: 'Self-earned money & financial independence' },
+  '36': { type: 'Good', meaning: 'Multi-talented person, religious wisdom, self-respect attitude' },
+  '63': { type: 'Good', meaning: 'Multi-talented person, religious wisdom, self-respect attitude' },
+  '37': { type: 'Good', meaning: 'Top position in any field, no harm number, long-term support' },
+  '73': { type: 'Good', meaning: 'Top position in any field, no harm number, long-term support' },
+  '38': { type: 'Good', meaning: 'Excellent for sales & property business' },
+  '83': { type: 'Good', meaning: 'Excellent for sales & property business' },
+  '39': { type: 'Good', meaning: 'Good debater, strong public expression' },
+  '93': { type: 'Good', meaning: 'Good debater, strong public expression' },
+  '57': { type: 'Good', meaning: 'Business success, public speaker, writer, astrologer' },
+  '75': { type: 'Good', meaning: 'Business success, public speaker, writer, astrologer' },
+  '59': { type: 'Good', meaning: 'Sharp minded person, technical knowledge, straightforward' },
+  '95': { type: 'Good', meaning: 'Sharp minded person, technical knowledge, straightforward' },
+  '69': { type: 'Good', meaning: 'Creativity, event planning, fashion & design, opposite gender cooperation' },
+  '96': { type: 'Good', meaning: 'Creativity, event planning, fashion & design, opposite gender cooperation' },
+
+  // Bad Pairs
+  '21': { type: 'Bad', meaning: 'Over-emotional, extravagant, excessive spending' },
+  '13': { type: 'Bad', meaning: 'Bad luck/hurdles, start good but poor finisher, lack of maturity' },
+  '14': { type: 'Bad', meaning: 'Secret enemies, family life spoiled, defame and loss of money' },
+  '41': { type: 'Bad', meaning: 'Secret enemies, family life spoiled, defame and loss of money' },
+  '16': { type: 'Bad', meaning: 'Money and job loss, relationship issues, health issues (UTI/piles)' },
+  '61': { type: 'Bad', meaning: 'Money and job loss, relationship issues, health issues (UTI/piles)' },
+  '18': { type: 'Bad', meaning: 'Health issues, family life issues, loss or friction with father' },
+  '81': { type: 'Bad', meaning: 'Health issues, family life issues, loss or friction with father' },
+  '23': { type: 'Bad', meaning: 'Children will cause embarrassment, relationship complications' },
+  '32': { type: 'Bad', meaning: 'Children will cause embarrassment, relationship complications' },
+  '24': { type: 'Bad', meaning: 'Mood swings, negative thoughts, emotional issues, family troubles' },
+  '42': { type: 'Bad', meaning: 'Mood swings, negative thoughts, emotional issues, family troubles' },
+  '26': { type: 'Bad', meaning: 'Hurdles in education, family issues, persuasion struggles' },
+  '62': { type: 'Bad', meaning: 'Hurdles in education, family issues, persuasion struggles' },
+  '27': { type: 'Bad', meaning: 'Joint pain, problems in profession/career stability' },
+  '72': { type: 'Bad', meaning: 'Joint pain, problems in profession/career stability' },
+  '28': { type: 'Bad', meaning: 'Depression, addiction risk, mood swings, partnership loss' },
+  '82': { type: 'Bad', meaning: 'Depression, addiction risk, mood swings, partnership loss' },
+  '34': { type: 'Bad', meaning: 'Breathing issues, asthma vulnerability, separation from children' },
+  '43': { type: 'Bad', meaning: 'Breathing issues, asthma vulnerability, separation from children' },
+  '35': { type: 'Bad', meaning: 'Away from parental property, financial losses' },
+  '53': { type: 'Bad', meaning: 'Away from parental property, financial losses' },
+  '45': { type: 'Bad', meaning: 'Hospital & court rounds, eyesight strain' },
+  '54': { type: 'Bad', meaning: 'Hospital & court rounds, eyesight strain' },
+  '46': { type: 'Bad', meaning: 'Skin disease vulnerability, controversial allegations' },
+  '64': { type: 'Bad', meaning: 'Skin disease vulnerability, controversial allegations' },
+  '48': { type: 'Bad', meaning: 'Depression, stress, marital coldness, legal disputes' },
+  '84': { type: 'Bad', meaning: 'Depression, stress, marital coldness, legal disputes' },
+  '58': { type: 'Bad', meaning: 'Complete financial loss, property loss, dead investments' },
+  '85': { type: 'Bad', meaning: 'Complete financial loss, property loss, dead investments' },
+  '67': { type: 'Bad', meaning: 'Musical lover, disturbed married life, evasion from marriage' },
+  '76': { type: 'Bad', meaning: 'Musical lover, disturbed married life, evasion from marriage' },
+  '68': { type: 'Bad', meaning: 'Hospital rounds (beneficial only for doctors/health workers)' },
+  '86': { type: 'Bad', meaning: 'Hospital rounds (beneficial only for doctors/health workers)' },
+  '78': { type: 'Bad', meaning: 'Negative thoughts, depression, loneliness (spiritual healer trait)' },
+  '87': { type: 'Bad', meaning: 'Negative thoughts, depression, loneliness (spiritual healer trait)' },
+  '79': { type: 'Bad', meaning: 'Ups and downs in career, blood related issues, kidney/joint issues' },
+  '97': { type: 'Bad', meaning: 'Ups and downs in career, blood related issues, kidney/joint issues' },
+  '89': { type: 'Bad', meaning: 'Aggression, struggling service-provider personality' },
+  '98': { type: 'Bad', meaning: 'Aggression, struggling service-provider personality' },
+
+  // Neutral Pairs
+  '47': { type: 'Neutral', meaning: 'Clever, strong determination & willpower' },
+  '74': { type: 'Neutral', meaning: 'Clever, strong determination & willpower' },
+  '49': { type: 'Neutral', meaning: 'Success after hard work, risky & daring endeavors' },
+  '94': { type: 'Neutral', meaning: 'Success after hard work, risky & daring endeavors' },
+  '56': { type: 'Neutral', meaning: 'Shy nature, delays in recovering personal money' },
+  '65': { type: 'Neutral', meaning: 'Shy nature, delays in recovering personal money' },
+};
+
 export function getDynamicNumberClassification(moolank: number) {
   const m = ((moolank - 1) % 9) + 1;
-  const friendlyGroups = [
-    [1, 2, 3], [4, 5, 6], [7, 8, 9],
-    [1, 4, 7], [2, 5, 8], [3, 6, 9],
-  ];
-
-  const enemyMap: Record<number, number[]> = {
-    1: [8],
-    8: [1],
-    3: [6],
-    6: [3],
-  };
-
-  const friendlySet = new Set<number>();
-  for (const group of friendlyGroups) {
-    if (group.includes(m)) {
-      for (const num of group) {
-        if (num !== m) friendlySet.add(num);
-      }
-    }
-  }
-
-  const enemies = enemyMap[m] || [];
-  for (const e of enemies) {
-    friendlySet.delete(e);
-  }
-
-  const friendlies = Array.from(friendlySet).sort((a, b) => a - b);
-  const neutrals: number[] = [];
-  for (let i = 1; i <= 9; i++) {
-    if (i !== m && !friendlies.includes(i) && !enemies.includes(i)) {
-      neutrals.push(i);
-    }
-  }
-
-  return {
-    friendly: friendlies,
-    enemy: enemies,
-    neutral: neutrals,
-  };
+  return NUMBER_RELATIONS[m] || { friendly: [], enemy: [], neutral: [] };
 }
 

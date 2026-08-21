@@ -1,26 +1,25 @@
-// mobile-app/src/app/(tabs)/mobile-num.tsx
-// Mobile Phone Numerology Engine & Harmony Meter Screen
-
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl } from 'react-native';
 import { Smartphone, Sparkles, AlertTriangle, ShieldCheck } from 'lucide-react-native';
 import { ASBColors, ASBShadows, ASBRadius } from '../../theme/tokens';
 import { GlassCard } from '../../components/common/GlassCard';
 import { GradientButton } from '../../components/common/GradientButton';
 import { CircularScoreMeter } from '../../components/common/CircularScoreMeter';
-import { mobileApi, reportApi, formatDobForApi } from '../../api/client';
+import { mobileApi, formatDobForApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { formatDobInput, isValidDob } from '../../utils/dobFormatter';
+import { formatDobInput } from '../../utils/dobFormatter';
 import { getGuestProfile, saveGuestProfile } from '../../utils/guestStorage';
-import { getDynamicNumberClassification } from '../../utils/numerologyMath';
-
-import { RefreshControl } from 'react-native';
+import {
+  getDynamicNumberClassification,
+  PAIR_DATA,
+  CRYSTAL_REMEDIES,
+  NUMBER_RELATIONS
+} from '../../utils/numerologyMath';
 
 const extractMobilePairs = (mobileNumber: string) => {
   const clean = mobileNumber.replace(/\D/g, '').replace(/0/g, '');
-  const standardBad = new Set(['13', '14', '16', '18', '23', '24', '26', '27', '28', '34', '35', '45', '46', '48', '58', '78', '79', '89']);
-  const pairMap = new Map<string, { pair: string; isGood: boolean; meaning: string; count: number }>();
+  const pairMap = new Map<string, { pair: string; type: 'Good' | 'Bad' | 'Neutral'; meaning: string; count: number }>();
 
   for (let i = 0; i < clean.length - 1; i++) {
     const pair = clean.slice(i, i + 2);
@@ -29,14 +28,14 @@ const extractMobilePairs = (mobileNumber: string) => {
       continue;
     }
 
-    const isBad = standardBad.has(pair);
+    const info = PAIR_DATA[pair] || { type: 'Neutral', meaning: 'Balanced vibration' };
     if (pairMap.has(pair)) {
       pairMap.get(pair)!.count += 1;
     } else {
       pairMap.set(pair, {
         pair,
-        isGood: !isBad,
-        meaning: isBad ? 'Challenging Frequency' : 'Favorable Vibration',
+        type: info.type,
+        meaning: info.meaning,
         count: 1,
       });
     }
@@ -106,15 +105,13 @@ export default function MobileNumScreen() {
         const raw = res.data;
         const parsedPairs = extractMobilePairs(mobile);
         const totalParsed = parsedPairs.reduce((sum: number, p: any) => sum + (p.count || 1), 0) || 1;
-        const goodParsed = parsedPairs.filter((p: any) => p.isGood).reduce((sum: number, p: any) => sum + (p.count || 1), 0);
-        const badParsed = totalParsed - goodParsed;
-        const badPairs = parsedPairs.filter((p: any) => !p.isGood).map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} (${p.meaning})`);
-        const detailsText = parsedPairs.map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} [${p.isGood ? 'Good' : 'Bad'}]: ${p.meaning}`).join(' • ');
+        const goodParsed = parsedPairs.filter((p: any) => p.type === 'Good').reduce((sum: number, p: any) => sum + (p.count || 1), 0);
+        const badParsed = parsedPairs.filter((p: any) => p.type === 'Bad').reduce((sum: number, p: any) => sum + (p.count || 1), 0);
+        const badPairs = parsedPairs.filter((p: any) => p.type === 'Bad').map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} (${p.meaning})`);
+        const detailsText = parsedPairs.map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} [${p.type}]: ${p.meaning}`).join(' • ');
 
-        // Pure dynamic percentage matching displayed chips 100%
         const calculatedScore = totalParsed > 0 ? Math.round((goodParsed / totalParsed) * 100) : 100;
-
-        const verdict = raw.final_result || (calculatedScore >= 90 ? 'HARMONIOUS VIBRATION' : calculatedScore >= 70 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION');
+        const verdict = raw.final_result || (calculatedScore >= 80 ? 'HARMONIOUS VIBRATION' : calculatedScore >= 60 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION');
 
         const remediesList: string[] = [];
         if (raw.remedies?.color_info) {
@@ -131,9 +128,12 @@ export default function MobileNumScreen() {
           ? `Your mobile number generates a Harmonious Vibration (Score: ${calculatedScore}%). A majority (${goodParsed} of ${totalParsed}) of your digit combinations are favorable, supporting positive communication, personal vitality, and auspicious wealth flow.`
           : `Your mobile number generates a Challenging Vibration (Score: ${calculatedScore}%). A majority (${badParsed} of ${totalParsed}) of digit combinations show potential conflict. Applying recommended remedies is advised to harmonize vibrations.`;
 
+        const refMoolank = raw.moolank || 1;
+        const classificationObj = raw.classification_numbers || (typeof raw.classification === 'object' ? raw.classification : getDynamicNumberClassification(refMoolank));
+
         setResult({
           ...raw,
-          classification_numbers: typeof raw.classification === 'object' ? raw.classification : null,
+          classification_numbers: classificationObj,
           pair_analysis: {
             score: calculatedScore,
             verdict,
@@ -178,57 +178,39 @@ export default function MobileNumScreen() {
       bhagyank = String(bhagyank).split('').reduce((s, d) => s + parseInt(d, 10), 0);
     }
 
-    // Zeros are non-counting: extract pairs from non-zero sequence
-    const nonZeroNum = cleanNum.replace(/0/g, '');
-    const badPairs: string[] = [];
-    const standardBad = ['13', '14', '16', '18', '23', '24', '26', '27', '28', '34', '35', '45', '46', '48', '58', '78', '79', '89'];
-    const pairDetailsList: string[] = [];
-    let goodCount = 0;
+    const parsedPairs = extractMobilePairs(mobile);
+    const totalParsed = parsedPairs.reduce((sum: number, p: any) => sum + (p.count || 1), 0) || 1;
+    const goodParsed = parsedPairs.filter((p: any) => p.type === 'Good').reduce((sum: number, p: any) => sum + (p.count || 1), 0);
+    const badParsed = parsedPairs.filter((p: any) => p.type === 'Bad').reduce((sum: number, p: any) => sum + (p.count || 1), 0);
+    const badPairs = parsedPairs.filter((p: any) => p.type === 'Bad').map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} (${p.meaning})`);
+    const detailsText = parsedPairs.map((p: any) => `${p.pair}${p.count > 1 ? ` (x${p.count})` : ''} [${p.type}]: ${p.meaning}`).join(' • ');
 
-    for (let i = 0; i < nonZeroNum.length - 1; i++) {
-      const pair = nonZeroNum.slice(i, i + 2);
-      // Neglect double numbers (11, 22, 33, 44, 55, 66, 77, 88, 99)
-      if (pair.length === 2 && pair[0] === pair[1]) {
-        continue;
-      }
+    const score = Math.round((goodParsed / totalParsed) * 100);
+    const verdict = score >= 80 ? 'HARMONIOUS VIBRATION' : score >= 60 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION';
 
-      if (standardBad.includes(pair)) {
-        badPairs.push(pair);
-        pairDetailsList.push(`${pair} [Bad]: Challenging frequency`);
-      } else {
-        goodCount++;
-        pairDetailsList.push(`${pair} [Good]: Favorable vibration`);
-      }
-    }
-
-    const totalPairs = Math.max(1, pairDetailsList.length);
-    const score = Math.round((goodCount / totalPairs) * 100);
-    const verdict = score >= 90 ? 'HARMONIOUS VIBRATION' : score >= 70 ? 'MODERATE HARMONY' : 'CHALLENGING VIBRATION';
-    const pairDetailsStr = pairDetailsList.join(' • ');
+    const refMoolank = moolank || 1;
+    const classificationObj = getDynamicNumberClassification(refMoolank);
 
     setResult({
       client_info: { name, dob, mobile_number: mobile },
-      moolank: moolank || 1,
+      moolank: refMoolank,
       bhagyank: bhagyank || 5,
+      power_number: powerNumber,
       classification: `Power Number #${powerNumber} Energy Alignment`,
-      classification_numbers: {
-        friendly: [1, 3, 5, 6].filter(n => n !== moolank),
-        enemy: [2, 7, 8].filter(n => n !== moolank),
-        neutral: [4, 9].filter(n => n !== moolank),
-      },
+      classification_numbers: classificationObj,
       pair_analysis: {
         score,
         verdict,
         bad_combinations: badPairs,
-        pair_details: pairDetailsStr,
+        pair_details: detailsText,
       },
-      interpretation: goodCount >= badPairs.length
-        ? `Your mobile number sums to Power Number #${powerNumber} and generates a Harmonious Vibration (Score: ${score}%). A majority (${goodCount} of ${totalPairs}) of non-zero digit combinations are favorable, promoting clear communications and wealth flow.`
-        : `Your mobile number sums to Power Number #${powerNumber} and generates a Challenging Vibration (Score: ${score}%). A majority (${badPairs.length} of ${totalPairs}) of digit combinations present potential conflicts. Applying remedies is advised.`,
+      interpretation: goodParsed >= badParsed
+        ? `Your mobile number sums to Power Number #${powerNumber} and generates a Harmonious Vibration (Score: ${score}%). A majority (${goodParsed} of ${totalParsed}) of non-zero digit combinations are favorable, promoting clear communications and wealth flow.`
+        : `Your mobile number sums to Power Number #${powerNumber} and generates a Challenging Vibration (Score: ${score}%). A majority (${badParsed} of ${totalParsed}) of digit combinations present potential conflicts. Applying remedies is advised.`,
       remedies: [
+        `Healing Crystal: ${CRYSTAL_REMEDIES[refMoolank] || 'Clear Quartz'}`,
         `Keep phone wallpaper in favorable colors for Power Number ${powerNumber}`,
         'Avoid keeping phone under pillow while sleeping',
-        'Keep phone screen clean to preserve positive vibrations',
       ],
     });
   };
@@ -303,9 +285,7 @@ export default function MobileNumScreen() {
               verdict={result.pair_analysis?.verdict || 'HARMONIOUS'}
             />
             <Text style={styles.classificationText}>
-              {typeof result.classification === 'string'
-                ? result.classification
-                : `${result.pair_analysis?.verdict || 'HARMONIOUS'} VIBRATION`}
+              {result.pair_analysis?.verdict || 'HARMONIOUS'} VIBRATION (POWER #{result.power_number || 1})
             </Text>
           </GlassCard>
 
@@ -323,36 +303,30 @@ export default function MobileNumScreen() {
 
           {/* Number Classification Card */}
           <GlassCard style={styles.detailCard}>
-            <Text style={styles.detailTitle}>Number Classification</Text>
+            <Text style={styles.detailTitle}>Number Classification (Driver #{result.moolank || 1})</Text>
             <View style={styles.classGrid}>
               <View style={styles.classBox}>
                 <Text style={styles.classLabel}>✅ FRIENDLY</Text>
                 <Text style={[styles.classVal, { color: ASBColors.goodGreen }]}>
-                  {(
-                    result.classification_numbers?.friendly ||
-                    (typeof result.classification === 'object' && result.classification?.friendly) ||
-                    []
-                  ).join(', ') || '1, 3, 5, 6, 9'}
+                  {result.classification_numbers?.friendly?.length > 0
+                    ? result.classification_numbers.friendly.join(', ')
+                    : 'None'}
                 </Text>
               </View>
               <View style={styles.classBox}>
                 <Text style={styles.classLabel}>❌ ENEMY</Text>
                 <Text style={[styles.classVal, { color: ASBColors.errorRed }]}>
-                  {(
-                    result.classification_numbers?.enemy ||
-                    (typeof result.classification === 'object' && result.classification?.enemy) ||
-                    []
-                  ).join(', ') || '2, 7, 8'}
+                  {result.classification_numbers?.enemy?.length > 0
+                    ? result.classification_numbers.enemy.join(', ')
+                    : 'None'}
                 </Text>
               </View>
               <View style={styles.classBox}>
                 <Text style={styles.classLabel}>⚖️ NEUTRAL</Text>
                 <Text style={[styles.classVal, { color: ASBColors.textMuted }]}>
-                  {(
-                    result.classification_numbers?.neutral ||
-                    (typeof result.classification === 'object' && result.classification?.neutral) ||
-                    []
-                  ).join(', ') || '4'}
+                  {result.classification_numbers?.neutral?.length > 0
+                    ? result.classification_numbers.neutral.join(', ')
+                    : 'None'}
                 </Text>
               </View>
             </View>
@@ -367,31 +341,41 @@ export default function MobileNumScreen() {
 
             {/* Structured Decorative Pair Chips */}
             <View style={styles.pairChipsGrid}>
-              {extractMobilePairs(mobile || result?.client_info?.mobile_number || '').map((item: any, idx: number) => (
-                <View
-                  key={idx}
-                  style={[
-                    styles.pairChipBox,
-                    item.isGood ? styles.pairChipGood : styles.pairChipBad,
-                  ]}
-                >
-                  <View style={styles.pairChipHeader}>
-                    {item.isGood ? (
-                      <Sparkles size={14} color={ASBColors.goodGreen} />
-                    ) : (
-                      <AlertTriangle size={14} color={ASBColors.errorRed} />
-                    )}
-                    <Text style={[styles.pairNumberText, { color: item.isGood ? ASBColors.goodGreen : ASBColors.errorRed }]}>
-                      Pair #{item.pair}{item.count > 1 ? ` (x${item.count})` : ''}
-                    </Text>
-                    <View style={[styles.pairTagBadge, { backgroundColor: item.isGood ? ASBColors.goodGreenBg : '#FEE2E2' }]}>
-                      <Text style={[styles.pairTagText, { color: item.isGood ? ASBColors.goodGreen : ASBColors.errorRed }]}>
-                        {item.isGood ? 'GOOD' : 'CHALLENGING'}
+              {extractMobilePairs(mobile || result?.client_info?.mobile_number || '').map((item: any, idx: number) => {
+                const isGood = item.type === 'Good';
+                const isBad = item.type === 'Bad';
+                const tagBg = isGood ? ASBColors.goodGreenBg : isBad ? '#FEE2E2' : '#FEF3C7';
+                const tagColor = isGood ? ASBColors.goodGreen : isBad ? ASBColors.errorRed : '#D97706';
+
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.pairChipBox,
+                      isGood ? styles.pairChipGood : isBad ? styles.pairChipBad : styles.pairChipNeutral,
+                    ]}
+                  >
+                    <View style={styles.pairChipHeader}>
+                      {isGood ? (
+                        <Sparkles size={14} color={ASBColors.goodGreen} />
+                      ) : isBad ? (
+                        <AlertTriangle size={14} color={ASBColors.errorRed} />
+                      ) : (
+                        <Sparkles size={14} color="#D97706" />
+                      )}
+                      <Text style={[styles.pairNumberText, { color: tagColor }]}>
+                        Pair #{item.pair}{item.count > 1 ? ` (x${item.count})` : ''}
                       </Text>
+                      <View style={[styles.pairTagBadge, { backgroundColor: tagBg }]}>
+                        <Text style={[styles.pairTagText, { color: tagColor }]}>
+                          {isGood ? 'GOOD' : isBad ? 'CHALLENGING' : 'NEUTRAL'}
+                        </Text>
+                      </View>
                     </View>
+                    <Text style={styles.pairMeaningText}>{item.meaning}</Text>
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </GlassCard>
 
@@ -491,6 +475,10 @@ const styles = StyleSheet.create({
   pairChipBad: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FCA5A5',
+  },
+  pairChipNeutral: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
   },
   pairChipHeader: {
     flexDirection: 'row',
